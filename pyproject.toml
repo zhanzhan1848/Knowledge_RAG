@@ -259,7 +259,7 @@ required-version = ">=0.4.0"
 index-url = "https://pypi.org/simple"
 extra-index-url = []
 no-cache = false
-prerelease = "disallow"
+prerelease = "allow"
 resolution = "highest"
 
 [tool.uv.sources]
