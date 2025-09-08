@@ -97,7 +97,8 @@
 ## 🚀 快速开始
 
 ### 环境要求
-- Python 3.9+
+- Python 3.10+
+- uv 包管理器 (推荐) 或 pip
 - Docker 20.0+
 - Docker Compose 2.0+
 - Git
@@ -166,6 +167,10 @@ open http://localhost:9090  # Prometheus
 
 ### 本地开发环境
 ```bash
+# 使用 uv 创建虚拟环境和安装依赖 (推荐)
+uv sync --dev
+
+# 或者使用传统方式
 # 创建虚拟环境
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
@@ -173,7 +178,7 @@ source venv/bin/activate  # Linux/Mac
 venv\Scripts\activate     # Windows
 
 # 安装开发依赖
-pip install -r requirements-dev.txt
+uv pip install -r requirements-dev.txt
 
 # 安装 pre-commit 钩子
 pre-commit install

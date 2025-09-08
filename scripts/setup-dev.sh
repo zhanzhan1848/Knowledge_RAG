@@ -48,7 +48,7 @@ check_requirements() {
     
     # 检查 Python
     if ! command -v python3 &> /dev/null; then
-        log_error "Python 3 未安装，请先安装 Python 3.11+"
+        log_error "Python 3 未安装，请先安装 Python 3.10+"
         exit 1
     fi
     
@@ -108,12 +108,21 @@ setup_directories() {
 install_dependencies() {
     log_info "安装 Python 依赖..."
     
-    if [ -f "requirements.txt" ]; then
-        python3 -m pip install --upgrade pip
-        python3 -m pip install -r requirements.txt
+    # 检查是否安装了 uv
+    if ! command -v uv &> /dev/null; then
+        log_info "安装 uv 包管理器..."
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        source $HOME/.cargo/env
+    fi
+    
+    if [ -f "pyproject.toml" ]; then
+        uv sync --dev
+        log_success "Python 依赖安装完成"
+    elif [ -f "requirements.txt" ]; then
+        uv pip install -r requirements.txt
         log_success "Python 依赖安装完成"
     else
-        log_warning "requirements.txt 文件不存在，跳过依赖安装"
+        log_warning "pyproject.toml 或 requirements.txt 文件不存在，跳过依赖安装"
     fi
 }
 

@@ -1,6 +1,6 @@
 # Vector Service Dockerfile
-# 基于Python 3.11的官方镜像
-FROM python:3.11-slim
+# 基于Python 3.10的官方镜像
+FROM python:3.10-slim
 
 # 设置工作目录
 WORKDIR /app
@@ -9,10 +9,9 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    UV_CACHE_DIR=/tmp/uv-cache
 
-# 安装系统依赖（向量计算需要数学库）
+# 安装系统依赖和uv（向量计算需要数学库）
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
@@ -22,14 +21,17 @@ RUN apt-get update && apt-get install -y \
     liblapack-dev \
     libatlas-base-dev \
     gfortran \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制依赖文件
-COPY requirements.txt requirements-dev.txt ./
+# 添加uv到PATH
+ENV PATH="/root/.cargo/bin:$PATH"
+
+# 复制项目配置文件
+COPY pyproject.toml uv.lock ./
 
 # 安装Python依赖
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+RUN uv sync --frozen --no-dev
 
 # 复制共享库
 COPY shared/ ./shared/

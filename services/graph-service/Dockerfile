@@ -1,7 +1,7 @@
 # GraphRAG服务Dockerfile
-# 基于Python 3.11构建GraphRAG知识图谱服务
+# 基于Python 3.10构建GraphRAG知识图谱服务
 
-FROM python:3.11-slim
+FROM python:3.10-slim
 
 # 设置工作目录
 WORKDIR /app
@@ -10,10 +10,9 @@ WORKDIR /app
 ENV PYTHONPATH=/app \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    UV_CACHE_DIR=/tmp/uv-cache
 
-# 安装系统依赖
+# 安装系统依赖和uv
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
@@ -23,15 +22,17 @@ RUN apt-get update && apt-get install -y \
     libffi-dev \
     libssl-dev \
     pkg-config \
+    && curl -LsSf https://astral.sh/uv/install.sh | sh \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制依赖文件
-COPY requirements.txt .
-COPY pyproject.toml .
+# 添加uv到PATH
+ENV PATH="/root/.cargo/bin:$PATH"
+
+# 复制项目配置文件
+COPY pyproject.toml uv.lock ./
 
 # 安装Python依赖
-RUN pip install --upgrade pip setuptools wheel && \
-    pip install -r requirements.txt
+RUN uv sync --frozen --no-dev
 
 # 复制共享库
 COPY shared/ /app/shared/
