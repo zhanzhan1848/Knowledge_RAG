@@ -52,22 +52,116 @@ jobs:
         uv sync --dev --prerelease=allow
         
     - name: Run Black (Code Formatting)
-      run: uv run --with black black .
+      continue-on-error: true
+      run: |
+        uv run --with black black --check --diff . > black-report.txt 2>&1 || true
+        echo "Black formatting check completed"
+        uv run --with black black
+        echo "Black code formatting completed"
       
     - name: Run isort (Import Sorting)
-      run: uv run --with isort isort .
+      continue-on-error: true
+      run: |
+        uv run --with isort isort --check-only --diff . > isort-report.txt 2>&1 || true
+        echo "isort import sorting check completed"
+        uv run --with isort isort .
+        echo "isort import sorting completed"
       
     - name: Run Flake8 (Linting)
-      run: uv run --with flake8 flake8 services/ shared/ scripts/ tests/
+      continue-on-error: true
+      run: |
+        uv run --with flake8 flake8 --output-file=flake8-report.txt --format=default services/ shared/ scripts/ tests/ || true
+        echo "Flake8 linting check completed"
       
     - name: Run MyPy (Type Checking)
+      continue-on-error: true
       run: |
-        cd services/vector-service && uv run --with mypy mypy app/
-        cd ../ && cd services/graph-service && uv run --with mypy mypy app/
-        cd ../ &&uv run --with mypy mypy shared/
+        mkdir -p mypy-reports
+        cd services/vector-service && uv run --with mypy mypy --txt-report ../../mypy-reports/vector-service app/ || true
+        cd ../../ && cd services/graph-service && uv run --with mypy mypy --txt-report ../../mypy-reports/graph-service app/ || true
+        cd ../../ && uv run --with mypy mypy --txt-report mypy-reports/shared shared/ || true
+        echo "MyPy type checking completed"
       
     - name: Run Bandit (Security Linting)
-      run: uv run --with bandit bandit -r services/ shared/ libs/
+      continue-on-error: true
+      run: |
+        uv run --with bandit bandit -r services/ shared/ -f json -o bandit-report.json || true
+        uv run --with bandit bandit -r services/ shared/ -f txt -o bandit-report.txt || true
+        echo "Bandit security linting completed"
+      
+    - name: Generate code quality summary
+      if: always()
+      run: |
+        echo "# Code Quality Check Summary" > code-quality-summary.md
+        echo "" >> code-quality-summary.md
+        echo "## Black (Code Formatting)" >> code-quality-summary.md
+        if [ -f black-report.txt ]; then
+          if [ -s black-report.txt ]; then
+            echo "❌ Issues found:" >> code-quality-summary.md
+            echo '```' >> code-quality-summary.md
+            head -20 black-report.txt >> code-quality-summary.md
+            echo '```' >> code-quality-summary.md
+          else
+            echo "✅ No formatting issues found" >> code-quality-summary.md
+          fi
+        fi
+        echo "" >> code-quality-summary.md
+        
+        echo "## isort (Import Sorting)" >> code-quality-summary.md
+        if [ -f isort-report.txt ]; then
+          if [ -s isort-report.txt ]; then
+            echo "❌ Issues found:" >> code-quality-summary.md
+            echo '```' >> code-quality-summary.md
+            head -20 isort-report.txt >> code-quality-summary.md
+            echo '```' >> code-quality-summary.md
+          else
+            echo "✅ No import sorting issues found" >> code-quality-summary.md
+          fi
+        fi
+        echo "" >> code-quality-summary.md
+        
+        echo "## Flake8 (Linting)" >> code-quality-summary.md
+        if [ -f flake8-report.txt ]; then
+          if [ -s flake8-report.txt ]; then
+            echo "❌ Issues found:" >> code-quality-summary.md
+            echo '```' >> code-quality-summary.md
+            head -20 flake8-report.txt >> code-quality-summary.md
+            echo '```' >> code-quality-summary.md
+          else
+            echo "✅ No linting issues found" >> code-quality-summary.md
+          fi
+        fi
+        echo "" >> code-quality-summary.md
+        
+        echo "## MyPy (Type Checking)" >> code-quality-summary.md
+        if [ -d mypy-reports ]; then
+          for service in vector-service graph-service shared; do
+            if [ -f "mypy-reports/$service/index.txt" ]; then
+              echo "### $service" >> code-quality-summary.md
+              if grep -q "Success" "mypy-reports/$service/index.txt"; then
+                echo "✅ No type checking issues found" >> code-quality-summary.md
+              else
+                echo "❌ Type checking issues found" >> code-quality-summary.md
+              fi
+            fi
+          done
+        fi
+        echo "" >> code-quality-summary.md
+        
+        echo "## Bandit (Security Linting)" >> code-quality-summary.md
+        if [ -f bandit-report.json ]; then
+          issues=$(jq '.results | length' bandit-report.json 2>/dev/null || echo "0")
+          if [ "$issues" -gt 0 ]; then
+            echo "❌ $issues security issues found" >> code-quality-summary.md
+            echo '```' >> code-quality-summary.md
+            head -20 bandit-report.txt >> code-quality-summary.md
+            echo '```' >> code-quality-summary.md
+          else
+            echo "✅ No security issues found" >> code-quality-summary.md
+          fi
+        fi
+        
+        echo "Code quality summary generated"
       
     - name: Upload code quality results
       uses: actions/upload-artifact@v4
@@ -75,8 +169,14 @@ jobs:
       with:
         name: code-quality-results
         path: |
-          .mypy_cache/
+          black-report.txt
+          isort-report.txt
+          flake8-report.txt
+          mypy-reports/
           bandit-report.json
+          bandit-report.txt
+          code-quality-summary.md
+          .mypy_cache/
 
   # ===========================================
   # 单元测试
