@@ -54,4 +54,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 EXPOSE 8003
 
 # 启动命令
-CMD ["uvicorn", "services.vector-service.main:app", "--host", "0.0.0.0", "--port", "8003", "--workers", "2"]
+CMD ["uv", "run", "uvicorn", "services.vector-service.main:app", "--host", "0.0.0.0", "--port", "8007", "--workers", "2"]

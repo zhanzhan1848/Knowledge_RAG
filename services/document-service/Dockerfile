@@ -56,4 +56,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 EXPOSE 8002
 
 # 启动命令
-CMD ["uvicorn", "services.document-service.main:app", "--host", "0.0.0.0", "--port", "8002", "--workers", "2"]
+CMD ["uv", "run", "uvicorn", "services.document-service.main:app", "--host", "0.0.0.0", "--port", "8002", "--workers", "2"]

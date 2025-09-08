@@ -47,4 +47,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 EXPOSE 8001
 
 # 启动命令
-CMD ["uvicorn", "services.auth-service.main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "2"]
+CMD ["uv", "run", "uvicorn", "services.auth-service.main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "2"]

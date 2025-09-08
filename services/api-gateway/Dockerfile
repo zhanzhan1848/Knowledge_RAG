@@ -46,4 +46,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 EXPOSE 8000
 
 # 启动命令
-CMD ["uvicorn", "services.api-gateway.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["uv", "run", "uvicorn", "services.api-gateway.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
