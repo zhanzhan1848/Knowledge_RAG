@@ -1,19 +1,20 @@
 # Knowledge RAG System - 负载和性能测试
 # 测试系统在高负载下的性能表现
 
-import pytest
 import asyncio
-import time
-import statistics
-from unittest.mock import Mock, patch, AsyncMock
-from httpx import AsyncClient
 import json
-import uuid
-from datetime import datetime, timedelta
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import psutil
+import statistics
 import threading
-from typing import List, Dict, Any
+import time
+import uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta
+from typing import Any, Dict, List
+from unittest.mock import AsyncMock, Mock, patch
+
+import psutil
+import pytest
+from httpx import AsyncClient
 
 
 @pytest.mark.performance

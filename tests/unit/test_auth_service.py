@@ -1,11 +1,12 @@
 # Knowledge RAG System - 认证服务单元测试
 # 测试用户认证、授权、JWT令牌管理等功能
 
-import pytest
-from unittest.mock import Mock, patch, AsyncMock
-from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 from fastapi import HTTPException, status
 
 
@@ -808,8 +809,8 @@ class TestSecurityFeatures:
 
         def mock_generate_totp_secret() -> str:
             """生成TOTP密钥"""
-            import secrets
             import base64
+            import secrets
 
             # 生成32字节随机密钥
             secret = secrets.token_bytes(32)

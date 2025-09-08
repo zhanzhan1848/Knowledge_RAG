@@ -18,18 +18,17 @@ import asyncio
 import logging
 import sys
 from contextlib import asynccontextmanager
-from typing import Dict, Any
+from typing import Any, Dict
 
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.openapi.docs import get_swagger_ui_html
-from fastapi.openapi.utils import get_openapi
-
+from app.api.routes import router
 from app.core.config import settings
 from app.core.dependencies import service_manager
-from app.api.routes import router
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.openapi.utils import get_openapi
+from fastapi.responses import JSONResponse
 from shared.middleware.logging import LoggingMiddleware
 from shared.middleware.metrics import MetricsMiddleware
 from shared.middleware.security import SecurityMiddleware

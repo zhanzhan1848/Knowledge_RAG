@@ -14,19 +14,18 @@ Date: 2024
 """
 
 import logging
-from typing import List, Dict, Any, Optional
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, Depends, Query, Body
+from app.core.dependencies import get_embedding_service, get_vector_manager
+from app.services.embedding_service import EmbeddingService
+from app.services.vector_manager import SearchResult, VectorManager
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, validator
-
-from app.services.vector_manager import VectorManager, SearchResult
-from app.services.embedding_service import EmbeddingService
-from app.core.dependencies import get_vector_manager, get_embedding_service
 from shared.utils.auth import verify_api_key
-from shared.utils.rate_limiter import RateLimiter
 from shared.utils.metrics import MetricsCollector
+from shared.utils.rate_limiter import RateLimiter
 
 logger = logging.getLogger(__name__)
 

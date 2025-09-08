@@ -1,16 +1,17 @@
 # Knowledge RAG System - 端到端用户工作流测试
 # 测试完整的用户使用场景和业务流程
 
-import pytest
 import asyncio
-from unittest.mock import Mock, patch, AsyncMock
-from httpx import AsyncClient
 import json
-import time
-from datetime import datetime, timedelta
-import uuid
 import os
 import tempfile
+import time
+import uuid
+from datetime import datetime, timedelta
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
+from httpx import AsyncClient
 
 
 @pytest.mark.e2e

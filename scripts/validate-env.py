@@ -6,16 +6,17 @@ Knowledge RAG 系统环境变量验证脚本
 描述: 验证环境变量配置是否正确，检查必要的服务连接
 """
 
-import os
-import sys
-import re
-from typing import Dict, List, Tuple, Optional
-from urllib.parse import urlparse
 import asyncio
+import os
+import re
+import sys
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+from urllib.parse import urlparse
+
 import aiohttp
 import asyncpg
 import redis.asyncio as redis
-from pathlib import Path
 
 
 # 颜色定义

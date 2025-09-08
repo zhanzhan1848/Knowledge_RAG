@@ -13,14 +13,13 @@ Date: 2024
 """
 
 import logging
-from typing import Optional
 from functools import lru_cache
+from typing import Optional
 
-from fastapi import Depends, HTTPException
-
-from app.services.vector_manager import VectorManager
-from app.services.embedding_service import EmbeddingService
 from app.core.config import settings
+from app.services.embedding_service import EmbeddingService
+from app.services.vector_manager import VectorManager
+from fastapi import Depends, HTTPException
 
 logger = logging.getLogger(__name__)
 

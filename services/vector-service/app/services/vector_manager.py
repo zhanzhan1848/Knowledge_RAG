@@ -14,21 +14,22 @@ Date: 2024
 
 import asyncio
 import logging
-from typing import List, Dict, Any, Optional, Union, Tuple
 from abc import ABC, abstractmethod
-from datetime import datetime
-import numpy as np
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from app.core.config import settings, VectorBackend
+import numpy as np
+from app.core.config import VectorBackend, settings
 from app.services.embedding_service import EmbeddingService
+from shared.utils.cache import CacheManager
+from shared.utils.metrics import MetricsCollector
+
 from shared.config.weaviate_config import (
     weaviate_config,
     weaviate_connection,
     weaviate_schema,
 )
-from shared.utils.cache import CacheManager
-from shared.utils.metrics import MetricsCollector
 
 logger = logging.getLogger(__name__)
 

@@ -14,16 +14,16 @@ Date: 2024
 """
 
 import asyncio
-import logging
-from typing import List, Dict, Any, Optional, Union
-from abc import ABC, abstractmethod
-from datetime import datetime
-import numpy as np
-from dataclasses import dataclass
 import hashlib
 import json
+import logging
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Union
 
-from app.core.config import settings, EmbeddingProvider
+import numpy as np
+from app.core.config import EmbeddingProvider, settings
 from shared.utils.cache import CacheManager
 from shared.utils.metrics import MetricsCollector
 
@@ -224,8 +224,8 @@ class HuggingFaceEmbeddingProvider(EmbeddingProvider):
     async def initialize(self) -> None:
         """初始化 HuggingFace 模型"""
         try:
-            from transformers import AutoTokenizer, AutoModel
             import torch
+            from transformers import AutoModel, AutoTokenizer
 
             # 加载模型和分词器
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)

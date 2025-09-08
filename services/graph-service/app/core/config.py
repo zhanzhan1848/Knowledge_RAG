@@ -19,9 +19,10 @@ Date: 2024
 """
 
 import os
-from typing import List, Optional, Dict, Any
-from pydantic import BaseSettings, Field, validator
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseSettings, Field, validator
 
 
 class GraphRAGServiceSettings(BaseSettings):

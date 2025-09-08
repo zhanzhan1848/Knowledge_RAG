@@ -1,12 +1,13 @@
 # Knowledge RAG System - 测试配置文件
 # 包含 pytest 的全局配置和 fixtures
 
+import asyncio
 import os
 import sys
-import asyncio
-import pytest
 from typing import AsyncGenerator, Generator
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

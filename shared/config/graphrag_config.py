@@ -15,10 +15,10 @@ Date: 2024
 """
 
 import os
-from typing import Dict, Any, Optional, List, Union
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
 
 class GraphRAGStorageType(Enum):

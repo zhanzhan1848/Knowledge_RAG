@@ -14,9 +14,9 @@ Date: 2024
 """
 
 import asyncio
-from typing import Optional, Dict, Any
 from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import Any, Dict, Optional
 
 from app.core.config import Settings, get_settings
 from app.services.graphrag_manager import GraphRAGManager

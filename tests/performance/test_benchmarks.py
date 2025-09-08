@@ -1,18 +1,19 @@
 # Knowledge RAG System - 性能基准测试
 # 测试系统各组件的性能基准和优化效果
 
-import pytest
 import asyncio
-import time
-import statistics
-from unittest.mock import Mock, patch, AsyncMock
-from httpx import AsyncClient
 import json
+import statistics
+import time
 import uuid
-from datetime import datetime, timedelta
-from typing import List, Dict, Any, Tuple
-import numpy as np
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Tuple
+from unittest.mock import AsyncMock, Mock, patch
+
+import numpy as np
+import pytest
+from httpx import AsyncClient
 
 
 @dataclass

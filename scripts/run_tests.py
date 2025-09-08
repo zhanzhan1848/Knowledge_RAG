@@ -5,12 +5,12 @@ Knowledge RAG System - 测试运行脚本
 提供便捷的测试执行命令和测试报告生成功能
 """
 
-import os
-import sys
 import argparse
+import os
 import subprocess
-from pathlib import Path
+import sys
 from datetime import datetime
+from pathlib import Path
 from typing import List, Optional
 
 # 添加项目根目录到Python路径

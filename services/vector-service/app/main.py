@@ -12,22 +12,22 @@ Author: Knowledge RAG Team
 Date: 2024
 """
 
-from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks
+import logging
+from contextlib import asynccontextmanager
+from typing import Any, Dict, List, Optional
+
+import uvicorn
+from app.api.v1 import embeddings, search, vectors
+from app.core.config import settings
+from app.core.exceptions import VectorServiceException
+from app.core.logging import setup_logging
+from app.services.vector_manager import VectorManager
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from contextlib import asynccontextmanager
-import uvicorn
-import logging
-from typing import List, Dict, Any, Optional
-
-from app.core.config import settings
-from app.core.logging import setup_logging
-from app.api.v1 import vectors, embeddings, search
-from app.services.vector_manager import VectorManager
-from app.core.exceptions import VectorServiceException
 from shared.middleware.auth import AuthMiddleware
-from shared.middleware.rate_limit import RateLimitMiddleware
 from shared.middleware.metrics import MetricsMiddleware
+from shared.middleware.rate_limit import RateLimitMiddleware
 from shared.utils.health import HealthChecker
 
 # 设置日志

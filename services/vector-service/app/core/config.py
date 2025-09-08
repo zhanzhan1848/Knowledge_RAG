@@ -14,9 +14,10 @@ Date: 2024
 """
 
 import os
-from typing import List, Optional, Dict, Any
-from pydantic import BaseSettings, Field, validator
 from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseSettings, Field, validator
 
 
 class VectorBackend(str, Enum):
