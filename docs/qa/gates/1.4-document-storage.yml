@@ -1,0 +1,24 @@
+schema: 1
+story: "1.4"
+story_title: "文档存储服务"
+gate: PASS
+status_reason: "存储架构设计合理，支持多种存储后端，备份和恢复策略完善。"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-01-15T10:36:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "PERF-001"
+    severity: low
+    finding: "大文件上传的分块策略可以进一步优化"
+    suggested_action: "考虑实施断点续传和并行上传功能"
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 1 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "存储空间使用率和I/O性能"
+      - "备份任务的成功率和恢复时间"
+      - "文件完整性校验结果"

@@ -1,0 +1,460 @@
+# Knowledge RAG System - Docker Compose Configuration
+# 用于本地开发环境的完整服务编排
+
+version: '3.8'
+
+services:
+  # ===========================================
+  # 基础设施服务
+  # ===========================================
+  
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: knowledge-rag-postgres
+    environment:
+      POSTGRES_DB: knowledge_rag
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_MULTIPLE_DATABASES: auth_db,document_db,vector_db,knowledge_graph_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+    networks:
+      - knowledge-rag-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 缓存和消息队列
+  redis:
+    image: redis:7-alpine
+    container_name: knowledge-rag-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - knowledge-rag-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Elasticsearch (用于全文搜索)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: knowledge-rag-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - knowledge-rag-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Neo4j 图数据库
+  neo4j:
+    image: neo4j:5.14-community
+    container_name: knowledge-rag-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/neo4j123
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    networks:
+      - knowledge-rag-network
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p neo4j123 'RETURN 1'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # RabbitMQ 消息队列
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: knowledge-rag-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: rabbitmq
+      RABBITMQ_DEFAULT_PASS: rabbitmq123
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - knowledge-rag-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Weaviate 向量数据库
+  weaviate:
+    image: cr.weaviate.io/semitechnologies/weaviate:1.22.4
+    container_name: knowledge-rag-weaviate
+    ports:
+      - "8080:8080"
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'none'
+      ENABLE_MODULES: 'text2vec-openai,text2vec-cohere,text2vec-huggingface,ref2vec-centroid,generative-openai,qna-openai,text2vec-model2vec'
+      CLUSTER_HOSTNAME: 'node1'
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    networks:
+      - knowledge-rag-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  text2vec-model2vec:
+    image: cr.weaviate.io/semitechnologies/model2vec-inference:minishlab-potion-base-32M
+
+  # ===========================================
+  # 微服务应用
+  # ===========================================
+
+  # API 网关
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: knowledge-rag-api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/knowledge_rag
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 认证服务
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    container_name: knowledge-rag-auth-service
+    ports:
+      - "8001:8001"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/auth_db
+      - REDIS_URL=redis://redis:6379/1
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 文档服务
+  document-service:
+    build:
+      context: .
+      dockerfile: services/document-service/Dockerfile
+    container_name: knowledge-rag-document-service
+    ports:
+      - "8002:8002"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/document_db
+      - REDIS_URL=redis://redis:6379/2
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ./data/uploads:/app/data/uploads
+      - ./data/temp:/app/data/temp
+      - ./data/processed:/app/data/processed
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 向量服务
+  vector-service:
+    build:
+      context: .
+      dockerfile: services/vector-service/Dockerfile
+    container_name: knowledge-rag-vector-service
+    ports:
+      - "8003:8003"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/vector_db
+      - REDIS_URL=redis://redis:6379/3
+      - WEAVIATE_URL=http://weaviate:8080
+      - WEAVIATE_API_KEY=
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ./data/vector_db:/app/data/vector_db
+      - ./data/chroma:/app/data/chroma
+      - ./data/faiss:/app/data/faiss
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      weaviate:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # LLM 服务
+  llm-service:
+    build:
+      context: .
+      dockerfile: services/llm-service/Dockerfile
+    container_name: knowledge-rag-llm-service
+    ports:
+      - "8004:8004"
+    environment:
+      - ENVIRONMENT=development
+      - REDIS_URL=redis://redis:6379/4
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ./models:/app/models
+      - ./data/cache:/app/data/cache
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # QA 服务
+  qa-service:
+    build:
+      context: .
+      dockerfile: services/qa-service/Dockerfile
+    container_name: knowledge-rag-qa-service
+    ports:
+      - "8005:8005"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/knowledge_rag
+      - REDIS_URL=redis://redis:6379/5
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 知识图谱服务
+  knowledge-graph-service:
+    build:
+      context: .
+      dockerfile: services/knowledge-graph-service/Dockerfile
+    container_name: knowledge-rag-knowledge-graph-service
+    ports:
+      - "8006:8006"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/knowledge_graph_db
+      - REDIS_URL=redis://redis:6379/6
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=neo4j123
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # GraphRAG 服务
+  graph-service:
+    build:
+      context: .
+      dockerfile: services/graph-service/Dockerfile
+    container_name: knowledge-rag-graph-service
+    ports:
+      - "8008:8008"
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/knowledge_graph_db
+      - REDIS_URL=redis://redis:6379/8
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=neo4j123
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GRAPHRAG_STORAGE_TYPE=local
+      - GRAPHRAG_STORAGE_BASE_DIR=/app/data/graphrag
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ./data/graphrag:/app/data/graphrag
+      - ./data:/app/data
+      - ./temp:/app/temp
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 通知服务
+  notification-service:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+    container_name: knowledge-rag-notification-service
+    ports:
+      - "8007:8007"
+    environment:
+      - ENVIRONMENT=development
+      - REDIS_URL=redis://redis:6379/7
+      - RABBITMQ_URL=amqp://rabbitmq:rabbitmq123@rabbitmq:5672/
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ===========================================
+  # 监控和管理工具
+  # ===========================================
+
+  # Prometheus 监控
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: knowledge-rag-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - knowledge-rag-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+
+  # Grafana 可视化
+  grafana:
+    image: grafana/grafana:latest
+    container_name: knowledge-rag-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      - prometheus
+
+# ===========================================
+# 网络配置
+# ===========================================
+networks:
+  knowledge-rag-network:
+    driver: bridge
+    name: knowledge-rag-network
+
+# ===========================================
+# 数据卷配置
+# ===========================================
+volumes:
+  postgres_data:
+    name: knowledge-rag-postgres-data
+  redis_data:
+    name: knowledge-rag-redis-data
+  elasticsearch_data:
+    name: knowledge-rag-elasticsearch-data
+  neo4j_data:
+    name: knowledge-rag-neo4j-data
+  neo4j_logs:
+    name: knowledge-rag-neo4j-logs
+  rabbitmq_data:
+    name: knowledge-rag-rabbitmq-data
+  weaviate_data:
+    name: knowledge-rag-weaviate-data
+  prometheus_data:
+    name: knowledge-rag-prometheus-data
+  grafana_data:
+    name: knowledge-rag-grafana-data

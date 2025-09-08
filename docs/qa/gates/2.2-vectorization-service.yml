@@ -1,0 +1,20 @@
+schema: 1
+story: "2.2"
+story_title: "向量化服务"
+gate: PASS
+status_reason: "向量化算法选择合理，批处理和缓存策略优秀，支持多种嵌入模型。"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-01-15T10:42:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "向量化处理的吞吐量和延迟"
+      - "嵌入模型的准确性和一致性"
+      - "缓存命中率和存储效率"

@@ -1,0 +1,435 @@
+# Knowledge RAG System - 测试环境配置
+# 用于端到端测试和集成测试的完整服务栈
+
+version: '3.8'
+
+services:
+  # ===========================================
+  # 基础设施服务
+  # ===========================================
+  
+  # PostgreSQL 数据库
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: knowledge-rag-postgres-test
+    environment:
+      POSTGRES_DB: knowledge_rag_test
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass123
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ./scripts/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d knowledge_rag_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  # Redis 缓存
+  redis-test:
+    image: redis:7-alpine
+    container_name: knowledge-rag-redis-test
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_test_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  # Elasticsearch 搜索引擎
+  elasticsearch-test:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: knowledge-rag-elasticsearch-test
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9201:9200"
+    volumes:
+      - elasticsearch_test_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - test-network
+
+  # Neo4j 图数据库
+  neo4j-test:
+    image: neo4j:5.15-community
+    container_name: knowledge-rag-neo4j-test
+    environment:
+      NEO4J_AUTH: neo4j/testpass123
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+      NEO4J_dbms_memory_heap_initial__size: 256m
+      NEO4J_dbms_memory_heap_max__size: 512m
+    ports:
+      - "7475:7474"
+      - "7688:7687"
+    volumes:
+      - neo4j_test_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p testpass123 'RETURN 1'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - test-network
+
+  # ===========================================
+  # 微服务
+  # ===========================================
+
+  # API 网关
+  api-gateway-test:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+      target: test
+    container_name: knowledge-rag-api-gateway-test
+    ports:
+      - "8100:8000"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://testuser:testpass123@postgres-test:5432/knowledge_rag_test
+      - REDIS_URL=redis://redis-test:6379/0
+      - JWT_SECRET_KEY=test_jwt_secret_key_for_testing_only
+      - AUTH_SERVICE_URL=http://auth-service-test:8001
+      - DOCUMENT_SERVICE_URL=http://document-service-test:8002
+      - VECTOR_SERVICE_URL=http://vector-service-test:8003
+      - LLM_SERVICE_URL=http://llm-service-test:8004
+      - QA_SERVICE_URL=http://qa-service-test:8005
+      - KNOWLEDGE_GRAPH_SERVICE_URL=http://knowledge-graph-service-test:8006
+      - NOTIFICATION_SERVICE_URL=http://notification-service-test:8007
+      - GRAPH_SERVICE_URL=http://graph-service-test:8008
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - test-network
+
+  # 认证服务
+  auth-service-test:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+      target: test
+    container_name: knowledge-rag-auth-service-test
+    ports:
+      - "8101:8001"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://testuser:testpass123@postgres-test:5432/knowledge_rag_test
+      - REDIS_URL=redis://redis-test:6379/1
+      - JWT_SECRET_KEY=test_jwt_secret_key_for_testing_only
+      - JWT_ALGORITHM=HS256
+      - JWT_EXPIRE_MINUTES=30
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8001/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - test-network
+
+  # 文档服务
+  document-service-test:
+    build:
+      context: .
+      dockerfile: services/document-service/Dockerfile
+      target: test
+    container_name: knowledge-rag-document-service-test
+    ports:
+      - "8102:8002"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://testuser:testpass123@postgres-test:5432/knowledge_rag_test
+      - REDIS_URL=redis://redis-test:6379/2
+      - ELASTICSEARCH_URL=http://elasticsearch-test:9200
+      - VECTOR_SERVICE_URL=http://vector-service-test:8003
+      - MAX_FILE_SIZE=10485760  # 10MB
+      - ALLOWED_FILE_TYPES=pdf,txt,docx,md,json
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+      elasticsearch-test:
+        condition: service_healthy
+    volumes:
+      - document_test_storage:/app/storage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8002/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - test-network
+
+  # 向量服务
+  vector-service-test:
+    build:
+      context: .
+      dockerfile: services/vector-service/Dockerfile
+      target: test
+    container_name: knowledge-rag-vector-service-test
+    ports:
+      - "8103:8003"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://testuser:testpass123@postgres-test:5432/knowledge_rag_test
+      - REDIS_URL=redis://redis-test:6379/3
+      - OPENAI_API_KEY=test_openai_key
+      - EMBEDDING_MODEL=text-embedding-ada-002
+      - VECTOR_DIMENSION=1536
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8003/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - test-network
+
+  # LLM 服务
+  llm-service-test:
+    build:
+      context: .
+      dockerfile: services/llm-service/Dockerfile
+      target: test
+    container_name: knowledge-rag-llm-service-test
+    ports:
+      - "8104:8004"
+    environment:
+      - ENVIRONMENT=testing
+      - REDIS_URL=redis://redis-test:6379/4
+      - OPENAI_API_KEY=test_openai_key
+      - DEFAULT_MODEL=gpt-3.5-turbo
+      - MAX_TOKENS=2048
+      - TEMPERATURE=0.7
+    depends_on:
+      redis-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8004/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - test-network
+
+  # 问答服务
+  qa-service-test:
+    build:
+      context: .
+      dockerfile: services/qa-service/Dockerfile
+      target: test
+    container_name: knowledge-rag-qa-service-test
+    ports:
+      - "8105:8005"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://testuser:testpass123@postgres-test:5432/knowledge_rag_test
+      - REDIS_URL=redis://redis-test:6379/5
+      - VECTOR_SERVICE_URL=http://vector-service-test:8003
+      - LLM_SERVICE_URL=http://llm-service-test:8004
+      - KNOWLEDGE_GRAPH_SERVICE_URL=http://knowledge-graph-service-test:8006
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8005/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - test-network
+
+  # 知识图谱服务
+  knowledge-graph-service-test:
+    build:
+      context: .
+      dockerfile: services/knowledge-graph-service/Dockerfile
+      target: test
+    container_name: knowledge-rag-knowledge-graph-service-test
+    ports:
+      - "8106:8006"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://testuser:testpass123@postgres-test:5432/knowledge_rag_test
+      - REDIS_URL=redis://redis-test:6379/6
+      - NEO4J_URI=bolt://neo4j-test:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=testpass123
+      - LLM_SERVICE_URL=http://llm-service-test:8004
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+      neo4j-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8006/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - test-network
+
+  # 通知服务
+  notification-service-test:
+    build:
+      context: .
+      dockerfile: services/notification-service/Dockerfile
+      target: test
+    container_name: knowledge-rag-notification-service-test
+    ports:
+      - "8107:8007"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://testuser:testpass123@postgres-test:5432/knowledge_rag_test
+      - REDIS_URL=redis://redis-test:6379/7
+      - SMTP_HOST=localhost
+      - SMTP_PORT=1025
+      - SMTP_USER=test@example.com
+      - SMTP_PASSWORD=testpass
+      - EMAIL_FROM=test@knowledge-rag.com
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8007/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - test-network
+
+  # 图服务
+  graph-service-test:
+    build:
+      context: .
+      dockerfile: services/graph-service/Dockerfile
+      target: test
+    container_name: knowledge-rag-graph-service-test
+    ports:
+      - "8108:8008"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://testuser:testpass123@postgres-test:5432/knowledge_rag_test
+      - REDIS_URL=redis://redis-test:6379/8
+      - NEO4J_URI=bolt://neo4j-test:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=testpass123
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+      neo4j-test:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8008/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - test-network
+
+  # ===========================================
+  # 测试工具服务
+  # ===========================================
+
+  # MailHog - 邮件测试工具
+  mailhog-test:
+    image: mailhog/mailhog:latest
+    container_name: knowledge-rag-mailhog-test
+    ports:
+      - "1026:1025"  # SMTP
+      - "8026:8025"  # Web UI
+    networks:
+      - test-network
+
+  # 测试数据初始化服务
+  test-data-init:
+    build:
+      context: .
+      dockerfile: scripts/Dockerfile.test-init
+    container_name: knowledge-rag-test-data-init
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://testuser:testpass123@postgres-test:5432/knowledge_rag_test
+      - REDIS_URL=redis://redis-test:6379/0
+      - NEO4J_URI=bolt://neo4j-test:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=testpass123
+      - ELASTICSEARCH_URL=http://elasticsearch-test:9200
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+      redis-test:
+        condition: service_healthy
+      neo4j-test:
+        condition: service_healthy
+      elasticsearch-test:
+        condition: service_healthy
+    networks:
+      - test-network
+    command: >
+      sh -c "
+        echo '开始初始化测试数据...'
+        python scripts/init_test_data.py
+        echo '测试数据初始化完成'
+      "
+
+volumes:
+  postgres_test_data:
+    driver: local
+  redis_test_data:
+    driver: local
+  elasticsearch_test_data:
+    driver: local
+  neo4j_test_data:
+    driver: local
+  document_test_storage:
+    driver: local
+
+networks:
+  test-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

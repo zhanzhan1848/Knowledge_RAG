@@ -1,0 +1,24 @@
+schema: 1
+story: "2.3"
+story_title: "向量数据库集成"
+gate: PASS
+status_reason: "Weaviate集成方案完善，索引策略合理，查询优化充分考虑性能需求。"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-01-15T10:44:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "REL-001"
+    severity: low
+    finding: "向量数据库的故障恢复机制需要更详细的说明"
+    suggested_action: "补充数据备份和集群故障转移策略"
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 1 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "向量检索的精度和召回率"
+      - "数据库查询性能和索引效率"
+      - "集群健康状态和数据一致性"

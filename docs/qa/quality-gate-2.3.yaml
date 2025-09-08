@@ -1,0 +1,779 @@
+# Story 2.3 向量数据库集成 - 质量门控配置
+# Quality Gate Configuration for Vector Database Integration
+
+metadata:
+  story_id: "2.3"
+  story_name: "向量数据库集成"
+  epic: "Epic 2 - 文档处理和知识抽取"
+  version: "1.0"
+  created_date: "2024-01-15"
+  last_updated: "2024-01-15"
+  owner: "QA团队"
+  reviewers:
+    - "架构师"
+    - "产品经理"
+  approver: "项目经理"
+  description: "向量数据库集成功能的质量门控标准和验证规则"
+
+# 准入标准 - Entry Criteria
+entry_criteria:
+  functional:
+    - name: "代码开发完成"
+      description: "所有向量数据库集成相关代码开发完成"
+      status: "required"
+      validation_method: "代码审查"
+      success_criteria: "100%功能代码完成"
+    
+    - name: "单元测试通过"
+      description: "所有单元测试执行通过"
+      status: "required"
+      validation_method: "自动化测试"
+      success_criteria: "单元测试通过率 ≥ 95%"
+    
+    - name: "代码质量检查"
+      description: "静态代码分析通过"
+      status: "required"
+      validation_method: "SonarQube扫描"
+      success_criteria: "0个严重问题，代码覆盖率 ≥ 90%"
+    
+    - name: "API文档完整"
+      description: "向量数据库API文档完整"
+      status: "required"
+      validation_method: "文档审查"
+      success_criteria: "100%API接口有文档"
+
+  environment:
+    - name: "测试环境就绪"
+      description: "向量数据库测试环境部署完成"
+      status: "required"
+      validation_method: "环境验证"
+      success_criteria: "Weaviate/Qdrant服务正常运行"
+    
+    - name: "测试数据准备"
+      description: "测试向量数据集准备完成"
+      status: "required"
+      validation_method: "数据验证"
+      success_criteria: "标准数据集和大规模数据集就绪"
+    
+    - name: "监控系统配置"
+      description: "性能监控和日志系统配置完成"
+      status: "required"
+      validation_method: "监控验证"
+      success_criteria: "Prometheus、Grafana、ELK配置正常"
+    
+    - name: "网络连通性"
+      description: "测试环境网络连接正常"
+      status: "required"
+      validation_method: "连通性测试"
+      success_criteria: "所有服务间网络连通正常"
+
+# 准出标准 - Exit Criteria
+exit_criteria:
+  functional:
+    - name: "数据库集成测试"
+      description: "Weaviate/Qdrant集成功能验证"
+      test_scenarios: ["TS-2.3-001"]
+      success_criteria: "100%集成测试通过"
+      priority: "P0"
+      validation_method: "自动化测试"
+    
+    - name: "CRUD操作测试"
+      description: "向量增删改查操作验证"
+      test_scenarios: ["TS-2.3-002"]
+      success_criteria: "CRUD操作成功率 ≥ 99.9%"
+      priority: "P0"
+      validation_method: "自动化测试"
+    
+    - name: "索引优化测试"
+      description: "向量索引配置和优化验证"
+      test_scenarios: ["TS-2.3-003"]
+      success_criteria: "索引创建成功率100%，性能提升 ≥ 50%"
+      priority: "P0"
+      validation_method: "性能测试"
+    
+    - name: "搜索功能测试"
+      description: "相似性搜索和混合搜索验证"
+      test_scenarios: ["TS-2.3-004"]
+      success_criteria: "搜索准确率 ≥ 95%，响应时间 < 100ms"
+      priority: "P0"
+      validation_method: "功能测试 + 性能测试"
+    
+    - name: "备份恢复测试"
+      description: "数据备份和恢复功能验证"
+      test_scenarios: ["TS-2.3-005"]
+      success_criteria: "备份恢复成功率100%，数据一致性100%"
+      priority: "P1"
+      validation_method: "集成测试"
+    
+    - name: "监控调优测试"
+      description: "性能监控和调优功能验证"
+      test_scenarios: ["TS-2.3-006"]
+      success_criteria: "监控准确率 ≥ 99%，调优效果 ≥ 20%"
+      priority: "P1"
+      validation_method: "监控验证"
+    
+    - name: "扩展性测试"
+      description: "水平扩展能力验证"
+      test_scenarios: ["TS-2.3-007"]
+      success_criteria: "扩展成功率100%，性能线性提升 ≥ 80%"
+      priority: "P2"
+      validation_method: "扩展性测试"
+
+  defect:
+    - name: "P0缺陷修复"
+      description: "所有P0级别缺陷必须修复"
+      success_criteria: "P0缺陷数量 = 0"
+      validation_method: "缺陷跟踪系统"
+    
+    - name: "P1缺陷修复"
+      description: "所有P1级别缺陷必须修复"
+      success_criteria: "P1缺陷数量 = 0"
+      validation_method: "缺陷跟踪系统"
+    
+    - name: "P2缺陷评估"
+      description: "P2级别缺陷风险评估"
+      success_criteria: "P2缺陷风险可接受"
+      validation_method: "风险评估"
+    
+    - name: "缺陷密度"
+      description: "代码缺陷密度控制"
+      success_criteria: "缺陷密度 < 1 defect/KLOC"
+      validation_method: "质量度量"
+
+  performance:
+    - name: "响应时间"
+      description: "向量查询响应时间要求"
+      success_criteria: "95%查询响应时间 < 50ms"
+      validation_method: "性能测试"
+      test_scenarios: ["TS-2.3-004"]
+    
+    - name: "吞吐量"
+      description: "系统查询吞吐量要求"
+      success_criteria: "QPS ≥ 1,000 queries/second"
+      validation_method: "负载测试"
+      test_scenarios: ["TS-2.3-004"]
+    
+    - name: "并发性能"
+      description: "并发查询处理能力"
+      success_criteria: "支持 ≥ 100并发查询"
+      validation_method: "并发测试"
+      test_scenarios: ["TS-2.3-004"]
+    
+    - name: "资源使用"
+      description: "系统资源使用效率"
+      success_criteria: "内存使用 < 4GB for 100K vectors，CPU < 80%"
+      validation_method: "资源监控"
+      test_scenarios: ["TS-2.3-006"]
+    
+    - name: "扩展性能"
+      description: "水平扩展性能表现"
+      success_criteria: "扩展效率 ≥ 80% linear scaling"
+      validation_method: "扩展性测试"
+      test_scenarios: ["TS-2.3-007"]
+
+  security:
+    - name: "数据加密"
+      description: "向量数据传输和存储加密"
+      success_criteria: "100%数据加密（TLS 1.3 + AES-256）"
+      validation_method: "安全扫描"
+    
+    - name: "访问控制"
+      description: "数据库访问权限控制"
+      success_criteria: "100%基于角色的访问控制"
+      validation_method: "权限测试"
+    
+    - name: "安全漏洞"
+      description: "系统安全漏洞检查"
+      success_criteria: "0个高危安全漏洞"
+      validation_method: "安全扫描"
+    
+    - name: "审计日志"
+      description: "完整的操作审计日志"
+      success_criteria: "100%关键操作有审计记录"
+      validation_method: "日志审计"
+
+# 质量标准 - Quality Standards
+quality_standards:
+  functional:
+    - metric: "功能完整性"
+      target: "100%"
+      measurement: "验收标准覆盖率"
+      tool: "测试管理系统"
+    
+    - metric: "功能正确性"
+      target: "≥ 99.9%"
+      measurement: "功能测试通过率"
+      tool: "自动化测试框架"
+    
+    - metric: "API兼容性"
+      target: "100%"
+      measurement: "API向后兼容性"
+      tool: "API测试工具"
+    
+    - metric: "错误处理"
+      target: "100%"
+      measurement: "异常场景覆盖率"
+      tool: "异常测试框架"
+
+  non_functional:
+    - metric: "性能效率"
+      target: "响应时间 < 50ms (P95)"
+      measurement: "查询响应时间"
+      tool: "JMeter, K6"
+    
+    - metric: "系统吞吐量"
+      target: "≥ 1,000 QPS"
+      measurement: "每秒查询数"
+      tool: "负载测试工具"
+    
+    - metric: "资源利用率"
+      target: "CPU < 80%, Memory < 4GB"
+      measurement: "系统资源监控"
+      tool: "Prometheus + Grafana"
+    
+    - metric: "系统可用性"
+      target: "≥ 99.9%"
+      measurement: "服务可用时间"
+      tool: "监控系统"
+    
+    - metric: "数据一致性"
+      target: "100%"
+      measurement: "数据完整性检查"
+      tool: "数据验证工具"
+    
+    - metric: "扩展能力"
+      target: "线性扩展 ≥ 80%"
+      measurement: "扩展性能比率"
+      tool: "扩展性测试框架"
+
+  code_quality:
+    - metric: "代码覆盖率"
+      target: "≥ 90%"
+      measurement: "测试代码覆盖率"
+      tool: "Coverage.py, Jest"
+    
+    - metric: "代码复杂度"
+      target: "圈复杂度 < 10"
+      measurement: "代码复杂度分析"
+      tool: "SonarQube"
+    
+    - metric: "代码重复率"
+      target: "< 3%"
+      measurement: "重复代码检测"
+      tool: "SonarQube"
+    
+    - metric: "技术债务"
+      target: "< 5%"
+      measurement: "技术债务比率"
+      tool: "SonarQube"
+
+# 测试场景映射 - Test Scenarios
+test_scenarios:
+  - id: "TS-2.3-001"
+    name: "向量数据库集成测试"
+    acceptance_criteria: ["AC1"]
+    priority: "P0"
+    type: "Integration"
+    estimated_effort: "8小时"
+    automation_level: "Full"
+    test_cases:
+      - "TC-2.3-001-01: Weaviate数据库连接测试"
+      - "TC-2.3-001-02: Qdrant数据库连接测试"
+      - "TC-2.3-001-03: 连接池管理测试"
+      - "TC-2.3-001-04: 连接异常处理测试"
+      - "TC-2.3-001-05: API集成测试"
+      - "TC-2.3-001-06: 配置管理测试"
+      - "TC-2.3-001-07: 超时重试机制测试"
+      - "TC-2.3-001-08: 健康检查测试"
+      - "TC-2.3-001-09: 多数据库切换测试"
+      - "TC-2.3-001-10: 版本兼容性测试"
+
+  - id: "TS-2.3-002"
+    name: "向量CRUD操作测试"
+    acceptance_criteria: ["AC2"]
+    priority: "P0"
+    type: "Unit + Integration"
+    estimated_effort: "12小时"
+    automation_level: "Full"
+    test_cases:
+      - "TC-2.3-002-01: 单向量插入测试"
+      - "TC-2.3-002-02: 批量向量插入测试"
+      - "TC-2.3-002-03: 向量查询测试"
+      - "TC-2.3-002-04: 向量更新测试"
+      - "TC-2.3-002-05: 向量删除测试"
+      - "TC-2.3-002-06: 批量操作测试"
+      - "TC-2.3-002-07: 并发操作测试"
+      - "TC-2.3-002-08: 事务处理测试"
+      - "TC-2.3-002-09: 数据一致性测试"
+      - "TC-2.3-002-10: 异常处理测试"
+
+  - id: "TS-2.3-003"
+    name: "索引配置和优化测试"
+    acceptance_criteria: ["AC3"]
+    priority: "P0"
+    type: "Integration"
+    estimated_effort: "10小时"
+    automation_level: "Partial"
+    test_cases:
+      - "TC-2.3-003-01: HNSW索引创建测试"
+      - "TC-2.3-003-02: IVF索引创建测试"
+      - "TC-2.3-003-03: 索引参数配置测试"
+      - "TC-2.3-003-04: 索引性能优化测试"
+      - "TC-2.3-003-05: 索引重建测试"
+      - "TC-2.3-003-06: 索引管理测试"
+      - "TC-2.3-003-07: 多索引并存测试"
+      - "TC-2.3-003-08: 索引统计信息测试"
+      - "TC-2.3-003-09: 索引内存使用测试"
+      - "TC-2.3-003-10: 索引构建时间测试"
+
+  - id: "TS-2.3-004"
+    name: "相似性搜索功能测试"
+    acceptance_criteria: ["AC4"]
+    priority: "P0"
+    type: "Integration + E2E"
+    estimated_effort: "16小时"
+    automation_level: "Full"
+    test_cases:
+      - "TC-2.3-004-01: 基础相似性搜索测试"
+      - "TC-2.3-004-02: Top-K搜索测试"
+      - "TC-2.3-004-03: 阈值搜索测试"
+      - "TC-2.3-004-04: 混合搜索测试"
+      - "TC-2.3-004-05: 元数据过滤搜索测试"
+      - "TC-2.3-004-06: 复杂查询测试"
+      - "TC-2.3-004-07: 搜索性能测试"
+      - "TC-2.3-004-08: 并发搜索测试"
+      - "TC-2.3-004-09: 搜索准确性测试"
+      - "TC-2.3-004-10: 大规模搜索测试"
+
+  - id: "TS-2.3-005"
+    name: "备份恢复机制测试"
+    acceptance_criteria: ["AC5"]
+    priority: "P1"
+    type: "Integration + E2E"
+    estimated_effort: "14小时"
+    automation_level: "Partial"
+    test_cases:
+      - "TC-2.3-005-01: 全量备份测试"
+      - "TC-2.3-005-02: 增量备份测试"
+      - "TC-2.3-005-03: 定时备份测试"
+      - "TC-2.3-005-04: 备份完整性验证测试"
+      - "TC-2.3-005-05: 全量恢复测试"
+      - "TC-2.3-005-06: 增量恢复测试"
+      - "TC-2.3-005-07: 指定时间点恢复测试"
+      - "TC-2.3-005-08: 跨环境恢复测试"
+      - "TC-2.3-005-09: 灾难恢复测试"
+      - "TC-2.3-005-10: 恢复性能测试"
+
+  - id: "TS-2.3-006"
+    name: "性能监控和调优测试"
+    acceptance_criteria: ["AC6"]
+    priority: "P1"
+    type: "Integration"
+    estimated_effort: "12小时"
+    automation_level: "Partial"
+    test_cases:
+      - "TC-2.3-006-01: QPS监控测试"
+      - "TC-2.3-006-02: 响应时间监控测试"
+      - "TC-2.3-006-03: 资源使用监控测试"
+      - "TC-2.3-006-04: 错误率监控测试"
+      - "TC-2.3-006-05: 告警机制测试"
+      - "TC-2.3-006-06: 自动调优测试"
+      - "TC-2.3-006-07: 手动调优测试"
+      - "TC-2.3-006-08: 性能分析报告测试"
+      - "TC-2.3-006-09: 容量规划测试"
+      - "TC-2.3-006-10: 监控数据准确性测试"
+
+  - id: "TS-2.3-007"
+    name: "水平扩展能力测试"
+    acceptance_criteria: ["AC7"]
+    priority: "P2"
+    type: "E2E"
+    estimated_effort: "18小时"
+    automation_level: "Manual"
+    test_cases:
+      - "TC-2.3-007-01: 节点动态添加测试"
+      - "TC-2.3-007-02: 节点初始化测试"
+      - "TC-2.3-007-03: 数据重分布测试"
+      - "TC-2.3-007-04: 负载均衡测试"
+      - "TC-2.3-007-05: 分片策略测试"
+      - "TC-2.3-007-06: 跨分片查询测试"
+      - "TC-2.3-007-07: 扩展性能测试"
+      - "TC-2.3-007-08: 故障节点处理测试"
+      - "TC-2.3-007-09: 最大扩展能力测试"
+      - "TC-2.3-007-10: 扩展稳定性测试"
+
+# 风险评估 - Risk Assessment
+risk_assessment:
+  high_risks:
+    - id: "RISK-2.3-001"
+      name: "数据库兼容性和稳定性问题"
+      description: "不同版本的Weaviate/Qdrant可能存在API兼容性问题"
+      probability: "Medium"
+      impact: "High"
+      risk_level: "High"
+      mitigation_strategy:
+        - "建立数据库适配层，统一API接口"
+        - "进行充分的兼容性测试"
+        - "建立版本管理和回滚机制"
+      validation_tests: ["TS-2.3-001"]
+      owner: "架构师"
+      due_date: "2024-01-20"
+    
+    - id: "RISK-2.3-002"
+      name: "大规模数据性能瓶颈"
+      description: "在大规模向量数据场景下，搜索性能可能不达标"
+      probability: "High"
+      impact: "High"
+      risk_level: "High"
+      mitigation_strategy:
+        - "优化索引配置和搜索参数"
+        - "实施分片和负载均衡"
+        - "建立性能监控和自动调优"
+      validation_tests: ["TS-2.3-003", "TS-2.3-004", "TS-2.3-006"]
+      owner: "性能工程师"
+      due_date: "2024-01-25"
+    
+    - id: "RISK-2.3-003"
+      name: "数据一致性和完整性风险"
+      description: "在并发操作和故障场景下，可能出现数据不一致"
+      probability: "Medium"
+      impact: "High"
+      risk_level: "High"
+      mitigation_strategy:
+        - "实施事务管理和一致性检查"
+        - "建立完善的备份恢复机制"
+        - "实施数据校验和修复功能"
+      validation_tests: ["TS-2.3-002", "TS-2.3-005"]
+      owner: "数据工程师"
+      due_date: "2024-01-22"
+
+  medium_risks:
+    - id: "RISK-2.3-004"
+      name: "扩展性限制"
+      description: "水平扩展能力可能不足以支持业务增长"
+      probability: "Medium"
+      impact: "Medium"
+      risk_level: "Medium"
+      mitigation_strategy:
+        - "设计灵活的分片策略"
+        - "实施自动扩展机制"
+        - "建立容量规划和预警系统"
+      validation_tests: ["TS-2.3-007"]
+      owner: "系统架构师"
+      due_date: "2024-01-30"
+    
+    - id: "RISK-2.3-005"
+      name: "监控和运维复杂性"
+      description: "监控系统可能无法及时发现和解决性能问题"
+      probability: "Medium"
+      impact: "Medium"
+      risk_level: "Medium"
+      mitigation_strategy:
+        - "建立全面的监控指标体系"
+        - "实施智能告警和自动化运维"
+        - "提供监控数据API接口"
+      validation_tests: ["TS-2.3-006"]
+      owner: "运维工程师"
+      due_date: "2024-01-28"
+
+# 决策矩阵 - Decision Matrix
+decision_matrix:
+  go_criteria:
+    functional:
+      - "100%核心功能测试通过 (TS-2.3-001 to TS-2.3-004)"
+      - "CRUD操作成功率 ≥ 99.9%"
+      - "搜索准确率 ≥ 95%"
+      - "索引优化效果 ≥ 50%性能提升"
+    
+    performance:
+      - "查询响应时间 < 50ms (P95)"
+      - "系统QPS ≥ 1,000"
+      - "并发处理能力 ≥ 100"
+      - "资源使用合理 (CPU < 80%, Memory < 4GB)"
+    
+    reliability:
+      - "系统可用性 ≥ 99.9%"
+      - "数据一致性 100%"
+      - "备份恢复成功率 100%"
+      - "故障恢复时间 < 5min"
+    
+    security:
+      - "0个高危安全漏洞"
+      - "100%数据加密"
+      - "完整的访问控制"
+      - "完整的审计日志"
+
+  no_go_criteria:
+    critical_failures:
+      - "核心功能测试失败 > 5%"
+      - "P0缺陷未修复"
+      - "性能指标严重不达标 (> 20%偏差)"
+      - "存在高危安全漏洞"
+    
+    quality_issues:
+      - "代码覆盖率 < 80%"
+      - "严重的数据一致性问题"
+      - "系统稳定性问题"
+      - "无法满足扩展性要求"
+
+  conditional_go_criteria:
+    acceptable_risks:
+      - "P1缺陷 ≤ 5个，且有明确修复计划"
+      - "P2功能缺失，但不影响核心业务"
+      - "性能指标轻微不达标 (< 10%偏差)，有优化计划"
+      - "非核心安全问题，有缓解措施"
+
+# 工具集成 - Tool Integration
+tool_integration:
+  functional_testing:
+    - name: "Postman/Newman"
+      purpose: "API功能测试"
+      configuration: "postman_collection_2.3.json"
+      automation: "CI/CD集成"
+      reporting: "Newman HTML报告"
+    
+    - name: "pytest"
+      purpose: "Python单元和集成测试"
+      configuration: "pytest.ini, conftest.py"
+      automation: "GitHub Actions"
+      reporting: "pytest-html报告"
+    
+    - name: "Jest"
+      purpose: "JavaScript单元测试"
+      configuration: "jest.config.js"
+      automation: "npm scripts"
+      reporting: "Jest覆盖率报告"
+    
+    - name: "Cypress"
+      purpose: "端到端测试"
+      configuration: "cypress.config.js"
+      automation: "CI/CD流水线"
+      reporting: "Cypress Dashboard"
+
+  performance_testing:
+    - name: "JMeter"
+      purpose: "负载和性能测试"
+      configuration: "vector_db_load_test.jmx"
+      automation: "Jenkins集成"
+      reporting: "JMeter HTML报告"
+    
+    - name: "K6"
+      purpose: "现代化性能测试"
+      configuration: "k6_performance_test.js"
+      automation: "GitLab CI"
+      reporting: "K6 Cloud报告"
+    
+    - name: "Artillery"
+      purpose: "高并发测试"
+      configuration: "artillery_config.yml"
+      automation: "Docker容器"
+      reporting: "Artillery报告"
+
+  security_testing:
+    - name: "OWASP ZAP"
+      purpose: "安全漏洞扫描"
+      configuration: "zap_baseline.conf"
+      automation: "安全扫描流水线"
+      reporting: "ZAP HTML报告"
+    
+    - name: "Bandit"
+      purpose: "Python代码安全扫描"
+      configuration: ".bandit"
+      automation: "pre-commit hooks"
+      reporting: "Bandit JSON报告"
+    
+    - name: "Burp Suite"
+      purpose: "深度安全测试"
+      configuration: "burp_project.burp"
+      automation: "手动测试"
+      reporting: "Burp扫描报告"
+
+  code_quality:
+    - name: "SonarQube"
+      purpose: "代码质量分析"
+      configuration: "sonar-project.properties"
+      automation: "CI/CD集成"
+      reporting: "SonarQube仪表板"
+    
+    - name: "Coverage.py"
+      purpose: "Python代码覆盖率"
+      configuration: ".coveragerc"
+      automation: "pytest集成"
+      reporting: "Coverage HTML报告"
+    
+    - name: "ESLint"
+      purpose: "JavaScript代码质量"
+      configuration: ".eslintrc.js"
+      automation: "pre-commit hooks"
+      reporting: "ESLint报告"
+
+  monitoring:
+    - name: "Prometheus + Grafana"
+      purpose: "性能监控和可视化"
+      configuration: "prometheus.yml, grafana_dashboards/"
+      automation: "自动部署"
+      reporting: "Grafana仪表板"
+    
+    - name: "ELK Stack"
+      purpose: "日志收集和分析"
+      configuration: "logstash.conf, kibana.yml"
+      automation: "Docker Compose"
+      reporting: "Kibana仪表板"
+    
+    - name: "Jaeger"
+      purpose: "分布式链路追踪"
+      configuration: "jaeger_config.yml"
+      automation: "Kubernetes部署"
+      reporting: "Jaeger API"
+
+# 报告配置 - Reporting Configuration
+reporting:
+  test_reports:
+    - name: "每日测试报告"
+      frequency: "Daily"
+      recipients: ["QA团队", "开发团队"]
+      content: ["测试执行状态", "通过率", "新发现缺陷"]
+      format: "HTML + Email"
+    
+    - name: "里程碑报告"
+      frequency: "Per Milestone"
+      recipients: ["项目经理", "产品经理", "架构师"]
+      content: ["质量门控状态", "风险评估", "决策建议"]
+      format: "PDF + Presentation"
+    
+    - name: "最终测试报告"
+      frequency: "End of Testing"
+      recipients: ["所有利益相关者"]
+      content: ["完整测试总结", "质量评估", "发布建议"]
+      format: "Comprehensive PDF"
+
+  quality_metrics:
+    - name: "质量仪表板"
+      update_frequency: "Real-time"
+      metrics: ["测试通过率", "缺陷趋势", "性能指标", "覆盖率"]
+      tool: "Grafana"
+      access: "团队成员"
+    
+    - name: "质量趋势分析"
+      update_frequency: "Weekly"
+      metrics: ["质量趋势", "风险状态", "改进建议"]
+      tool: "自定义报告系统"
+      access: "管理层"
+
+# 相关文档 - Related Documents
+related_documents:
+  requirements:
+    - name: "Epic详细说明"
+      path: "../prd/epic-details.md"
+      version: "1.0"
+      relevance: "需求来源"
+    
+    - name: "功能需求文档"
+      path: "../prd/functional-requirements.md"
+      version: "1.0"
+      relevance: "详细功能需求"
+    
+    - name: "非功能需求文档"
+      path: "../prd/non-functional-requirements.md"
+      version: "1.0"
+      relevance: "性能和质量要求"
+
+  architecture:
+    - name: "系统架构文档"
+      path: "../architecture.md"
+      version: "1.0"
+      relevance: "系统设计"
+    
+    - name: "服务架构文档"
+      path: "../service-architecture.md"
+      version: "1.0"
+      relevance: "服务设计"
+    
+    - name: "数据模型文档"
+      path: "../data-model.md"
+      version: "1.0"
+      relevance: "数据结构"
+
+  api_specs:
+    - name: "API规范文档"
+      path: "../api-specification.md"
+      version: "1.0"
+      relevance: "接口定义"
+
+  test_docs:
+    - name: "测试设计文档"
+      path: "./test-design-2.3.md"
+      version: "1.0"
+      relevance: "详细测试设计"
+    
+    - name: "可追溯性矩阵"
+      path: "./traceability-matrix-2.3.md"
+      version: "1.0"
+      relevance: "需求追溯"
+
+# 审批工作流 - Approval Workflow
+approval_workflow:
+  stages:
+    - stage: "QA审查"
+      approver: "QA负责人"
+      criteria: ["测试设计完整性", "测试覆盖率", "质量标准合理性"]
+      deadline: "2024-01-16"
+      status: "Pending"
+    
+    - stage: "技术审查"
+      approver: "架构师"
+      criteria: ["技术方案可行性", "性能要求合理性", "风险评估准确性"]
+      deadline: "2024-01-17"
+      status: "Pending"
+    
+    - stage: "产品审查"
+      approver: "产品经理"
+      criteria: ["业务需求覆盖", "用户体验考虑", "发布标准合理"]
+      deadline: "2024-01-18"
+      status: "Pending"
+    
+    - stage: "最终批准"
+      approver: "项目经理"
+      criteria: ["整体质量标准", "项目风险可控", "资源分配合理"]
+      deadline: "2024-01-19"
+      status: "Pending"
+
+# 版本历史 - Version History
+version_history:
+  - version: "1.0"
+    date: "2024-01-15"
+    author: "QA团队"
+    changes: ["初始版本创建", "完整质量门控标准定义"]
+    approver: "QA负责人"
+
+# 生效和失效日期 - Effective and Expiry Dates
+effective_date: "2024-01-20"
+expiry_date: "2024-12-31"
+review_frequency: "Quarterly"
+next_review_date: "2024-04-20"
+
+# 联系信息 - Contact Information
+contacts:
+  qa_team:
+    lead: "张测试"
+    email: "zhang.test@company.com"
+    phone: "+86-138-0000-0001"
+    responsibility: "测试执行和质量保证"
+  
+  architecture_team:
+    lead: "李架构"
+    email: "li.arch@company.com"
+    phone: "+86-138-0000-0002"
+    responsibility: "技术架构和性能优化"
+  
+  product_team:
+    lead: "王产品"
+    email: "wang.product@company.com"
+    phone: "+86-138-0000-0003"
+    responsibility: "产品需求和业务验证"
+  
+  project_management:
+    lead: "赵项目"
+    email: "zhao.pm@company.com"
+    phone: "+86-138-0000-0004"
+    responsibility: "项目协调和资源管理"

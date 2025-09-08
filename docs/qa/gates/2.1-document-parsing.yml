@@ -1,0 +1,24 @@
+schema: 1
+story: "2.1"
+story_title: "文档解析服务"
+gate: PASS
+status_reason: "多格式文档解析方案完善，OCR集成合理，性能优化策略充分。"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-01-15T10:40:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "PERF-002"
+    severity: low
+    finding: "大文件处理的内存管理可以进一步优化"
+    suggested_action: "实施流式处理和内存回收机制"
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 1 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "文档解析的准确率和处理速度"
+      - "OCR识别质量和错误率"
+      - "内存使用情况和处理队列长度"

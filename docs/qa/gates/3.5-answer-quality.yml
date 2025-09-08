@@ -1,0 +1,20 @@
+schema: 1
+story: "3.5"
+story_title: "答案质量评估"
+gate: PASS
+status_reason: "质量评估框架设计完善，多维度评估指标合理，支持持续学习和优化。"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-01-15T10:58:00Z"
+
+waiver: { active: false }
+
+top_issues: []
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 0 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "答案质量评分的准确性和一致性"
+      - "用户反馈和满意度指标"
+      - "质量评估模型的性能和可靠性"

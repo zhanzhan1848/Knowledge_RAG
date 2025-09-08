@@ -1,0 +1,27 @@
+schema: 1
+story: "1.2"
+story_title: "API网关服务"
+gate: CONCERNS
+status_reason: "核心功能设计良好，但缺少速率限制和安全防护的详细实施方案。"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-01-15T10:32:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "SEC-001"
+    severity: medium
+    finding: "API网关缺少详细的速率限制和DDoS防护策略"
+    suggested_action: "补充速率限制算法选择和配置参数说明"
+  - id: "TEST-001"
+    severity: low
+    finding: "负载测试场景需要更具体的性能指标"
+    suggested_action: "定义具体的QPS和延迟目标值"
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 1, low: 1 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "API网关的性能指标和错误率"
+      - "安全防护机制的有效性"

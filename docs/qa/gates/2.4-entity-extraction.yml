@@ -1,0 +1,32 @@
+schema: 1
+story: "2.4"
+story_title: "实体抽取服务"
+gate: CONCERNS
+status_reason: "NLP模型集成方案合理，但缺少模型准确性验证和持续学习机制。"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-01-15T10:46:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "TEST-003"
+    severity: medium
+    finding: "缺少NLP模型准确性的基准测试和评估指标"
+    suggested_action: "建立标准测试数据集和F1-score等评估指标"
+  - id: "MNT-001"
+    severity: medium
+    finding: "模型版本管理和更新策略需要完善"
+    suggested_action: "实施模型版本控制和A/B测试机制"
+  - id: "PERF-003"
+    severity: low
+    finding: "批量处理的并发策略可以优化"
+    suggested_action: "考虑GPU加速和模型并行处理"
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 2, low: 1 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "实体抽取的准确率和处理速度"
+      - "模型性能指标和资源使用情况"
+      - "抽取结果的质量和一致性"

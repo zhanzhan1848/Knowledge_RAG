@@ -1,0 +1,408 @@
+# Knowledge RAG System - 安全扫描工作流
+# 专门用于安全漏洞扫描和代码安全检查
+
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # 每周一凌晨3点运行完整安全扫描
+    - cron: '0 3 * * 1'
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ===========================================
+  # 代码安全扫描
+  # ===========================================
+  code-security:
+    name: Code Security Analysis
+    runs-on: ubuntu-latest
+    
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install security scanning tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit safety semgrep
+        
+    - name: Run Bandit security scan
+      run: |
+        bandit -r services/ shared/ libs/ -f json -o bandit-report.json || true
+        bandit -r services/ shared/ libs/ -f txt -o bandit-report.txt || true
+        
+    - name: Run Safety check for dependencies
+      run: |
+        safety check --json --output safety-report.json || true
+        safety check --output safety-report.txt || true
+        
+    - name: Run Semgrep security scan
+      run: |
+        semgrep --config=auto --json --output=semgrep-report.json services/ shared/ libs/ || true
+        
+    - name: Upload security scan results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-scan-results
+        path: |
+          bandit-report.*
+          safety-report.*
+          semgrep-report.json
+
+  # ===========================================
+  # 依赖漏洞扫描
+  # ===========================================
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy vulnerability scanner for Python dependencies
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+        
+    - name: Run Trivy vulnerability scanner (JSON format)
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'json'
+        output: 'trivy-results.json'
+        
+    - name: Upload Trivy results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: trivy-scan-results
+        path: trivy-results.json
+
+  # ===========================================
+  # Docker 镜像安全扫描
+  # ===========================================
+  docker-security:
+    name: Docker Image Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    
+    strategy:
+      matrix:
+        service:
+          - api-gateway
+          - auth-service
+          - document-service
+          - vector-service
+          - llm-service
+          - qa-service
+          - knowledge-graph-service
+          - notification-service
+          - graph-service
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build Docker image for scanning
+      run: |
+        docker build -t ${{ matrix.service }}:scan -f services/${{ matrix.service }}/Dockerfile services/${{ matrix.service }}/
+        
+    - name: Run Trivy vulnerability scanner on Docker image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: '${{ matrix.service }}:scan'
+        format: 'sarif'
+        output: 'trivy-${{ matrix.service }}.sarif'
+        
+    - name: Upload Docker scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-${{ matrix.service }}.sarif'
+        
+    - name: Run Trivy vulnerability scanner (JSON format)
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: '${{ matrix.service }}:scan'
+        format: 'json'
+        output: 'trivy-${{ matrix.service }}.json'
+        
+    - name: Upload Docker scan results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: docker-scan-results-${{ matrix.service }}
+        path: trivy-${{ matrix.service }}.json
+
+  # ===========================================
+  # 密钥和敏感信息扫描
+  # ===========================================
+  secrets-scan:
+    name: Secrets and Sensitive Data Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # 获取完整历史记录以进行深度扫描
+        
+    - name: Install TruffleHog
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+        
+    - name: Run TruffleHog secrets scan
+      run: |
+        trufflehog git file://. --json --output=trufflehog-results.json || true
+        
+    - name: Install detect-secrets
+      run: |
+        pip install detect-secrets
+        
+    - name: Run detect-secrets scan
+      run: |
+        detect-secrets scan --all-files --baseline .secrets.baseline || true
+        
+    - name: Upload secrets scan results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: secrets-scan-results
+        path: |
+          trufflehog-results.json
+          .secrets.baseline
+
+  # ===========================================
+  # 许可证合规性检查
+  # ===========================================
+  license-check:
+    name: License Compliance Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        
+    - name: Install license checking tools
+      run: |
+        pip install pip-licenses licensecheck
+        
+    - name: Check Python package licenses
+      run: |
+        pip install -r requirements.txt
+        pip-licenses --format=json --output-file=python-licenses.json
+        pip-licenses --format=plain --output-file=python-licenses.txt
+        
+    - name: Run license compatibility check
+      run: |
+        # 检查是否有不兼容的许可证
+        licensecheck --zero || true
+        
+    - name: Upload license check results
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: license-check-results
+        path: |
+          python-licenses.*
+
+  # ===========================================
+  # SAST (静态应用安全测试)
+  # ===========================================
+  sast-analysis:
+    name: Static Application Security Testing
+    runs-on: ubuntu-latest
+    
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: python
+        queries: security-and-quality
+        
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v2
+      
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:python"
+
+  # ===========================================
+  # 安全配置检查
+  # ===========================================
+  security-config:
+    name: Security Configuration Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Check Docker security configurations
+      run: |
+        echo "# Docker 安全配置检查" > security-config-report.md
+        echo "" >> security-config-report.md
+        
+        # 检查 Dockerfile 安全最佳实践
+        find . -name "Dockerfile" -type f | while read dockerfile; do
+          echo "## 检查文件: $dockerfile" >> security-config-report.md
+          echo "" >> security-config-report.md
+          
+          # 检查是否使用非 root 用户
+          if grep -q "USER" "$dockerfile"; then
+            echo "✅ 使用非 root 用户" >> security-config-report.md
+          else
+            echo "⚠️  未明确设置非 root 用户" >> security-config-report.md
+          fi
+          
+          # 检查是否固定基础镜像版本
+          if grep -E "FROM.*:latest" "$dockerfile"; then
+            echo "⚠️  使用了 latest 标签" >> security-config-report.md
+          else
+            echo "✅ 使用了固定版本标签" >> security-config-report.md
+          fi
+          
+          echo "" >> security-config-report.md
+        done
+        
+    - name: Check environment variable security
+      run: |
+        echo "## 环境变量安全检查" >> security-config-report.md
+        echo "" >> security-config-report.md
+        
+        # 检查是否有硬编码的敏感信息
+        if grep -r -i "password\|secret\|key\|token" --include="*.py" --include="*.yml" --include="*.yaml" --exclude-dir=".git" . | grep -v "_template" | grep -v "example" | grep -v "#" | head -10; then
+          echo "⚠️  发现可能的硬编码敏感信息" >> security-config-report.md
+        else
+          echo "✅ 未发现明显的硬编码敏感信息" >> security-config-report.md
+        fi
+        
+    - name: Upload security config report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-config-report
+        path: security-config-report.md
+
+  # ===========================================
+  # 安全报告汇总
+  # ===========================================
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [code-security, dependency-scan, docker-security, secrets-scan, license-check, sast-analysis, security-config]
+    if: always()
+    
+    steps:
+    - name: Download all security artifacts
+      uses: actions/download-artifact@v3
+      
+    - name: Generate security summary
+      run: |
+        echo "# 安全扫描结果汇总" > security-summary.md
+        echo "" >> security-summary.md
+        echo "## 扫描状态" >> security-summary.md
+        echo "" >> security-summary.md
+        
+        if [ "${{ needs.code-security.result }}" == "success" ]; then
+          echo "✅ 代码安全扫描: 完成" >> security-summary.md
+        else
+          echo "❌ 代码安全扫描: 失败" >> security-summary.md
+        fi
+        
+        if [ "${{ needs.dependency-scan.result }}" == "success" ]; then
+          echo "✅ 依赖漏洞扫描: 完成" >> security-summary.md
+        else
+          echo "❌ 依赖漏洞扫描: 失败" >> security-summary.md
+        fi
+        
+        if [ "${{ needs.docker-security.result }}" == "success" ]; then
+          echo "✅ Docker 镜像安全扫描: 完成" >> security-summary.md
+        else
+          echo "❌ Docker 镜像安全扫描: 失败" >> security-summary.md
+        fi
+        
+        if [ "${{ needs.secrets-scan.result }}" == "success" ]; then
+          echo "✅ 密钥扫描: 完成" >> security-summary.md
+        else
+          echo "❌ 密钥扫描: 失败" >> security-summary.md
+        fi
+        
+        if [ "${{ needs.license-check.result }}" == "success" ]; then
+          echo "✅ 许可证检查: 完成" >> security-summary.md
+        else
+          echo "❌ 许可证检查: 失败" >> security-summary.md
+        fi
+        
+        if [ "${{ needs.sast-analysis.result }}" == "success" ]; then
+          echo "✅ 静态安全分析: 完成" >> security-summary.md
+        else
+          echo "❌ 静态安全分析: 失败" >> security-summary.md
+        fi
+        
+        if [ "${{ needs.security-config.result }}" == "success" ]; then
+          echo "✅ 安全配置检查: 完成" >> security-summary.md
+        else
+          echo "❌ 安全配置检查: 失败" >> security-summary.md
+        fi
+        
+        echo "" >> security-summary.md
+        echo "## 建议" >> security-summary.md
+        echo "" >> security-summary.md
+        echo "1. 定期更新依赖包以修复已知漏洞" >> security-summary.md
+        echo "2. 确保所有敏感信息都通过环境变量传递" >> security-summary.md
+        echo "3. 定期审查和更新安全配置" >> security-summary.md
+        echo "4. 监控 GitHub Security 标签页中的安全警报" >> security-summary.md
+        
+        cat security-summary.md
+        
+    - name: Upload security summary
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-summary
+        path: security-summary.md

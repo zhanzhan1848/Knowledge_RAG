@@ -1,0 +1,32 @@
+schema: 1
+story: "3.1"
+story_title: "GraphRAG引擎核心"
+gate: CONCERNS
+status_reason: "图检索算法设计复杂且合理，但缺少算法性能基准和可解释性机制。"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-01-15T10:50:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "ARCH-001"
+    severity: medium
+    finding: "复杂的图遍历算法缺少性能基准和复杂度分析"
+    suggested_action: "建立算法性能基准测试和时间复杂度文档"
+  - id: "TEST-004"
+    severity: medium
+    finding: "图检索结果的质量评估机制不够完善"
+    suggested_action: "实施检索准确性和相关性的量化评估"
+  - id: "DOC-001"
+    severity: low
+    finding: "算法可解释性文档需要补充"
+    suggested_action: "添加算法决策过程的可视化和解释功能"
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 2, low: 1 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "GraphRAG检索的准确性和相关性"
+      - "算法执行时间和资源消耗"
+      - "检索结果的多样性和覆盖度"

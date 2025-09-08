@@ -1,0 +1,33 @@
+schema: 1
+story: "3.2"
+story_title: "LLM集成服务"
+gate: CONCERNS
+status_reason: "LLM集成架构合理，但缺少模型安全性和成本控制的详细策略。"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-01-15T10:52:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "SEC-004"
+    severity: high
+    finding: "LLM输入输出缺少安全过滤和内容审查机制"
+    suggested_action: "实施输入验证、输出过滤和有害内容检测"
+  - id: "PERF-005"
+    severity: medium
+    finding: "LLM调用的成本控制和限流机制需要完善"
+    suggested_action: "添加API调用配额管理和成本监控"
+  - id: "REL-002"
+    severity: medium
+    finding: "多LLM提供商的故障转移策略不够详细"
+    suggested_action: "完善备用模型切换和降级策略"
+
+risk_summary:
+  totals: { critical: 0, high: 1, medium: 2, low: 0 }
+  recommendations:
+    must_fix:
+      - "实施LLM安全过滤机制"
+    monitor:
+      - "LLM响应质量和一致性"
+      - "API调用成本和使用量"
+      - "模型可用性和响应时间"

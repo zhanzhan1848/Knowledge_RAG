@@ -1,0 +1,32 @@
+schema: 1
+story: "1.3"
+story_title: "用户认证与授权系统"
+gate: CONCERNS
+status_reason: "认证流程设计完善，但安全策略需要加强，特别是会话管理和密码策略。"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-01-15T10:34:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "SEC-002"
+    severity: high
+    finding: "缺少详细的密码复杂度要求和账户锁定策略"
+    suggested_action: "定义密码策略、失败重试限制和账户锁定机制"
+  - id: "SEC-003"
+    severity: medium
+    finding: "JWT令牌刷新机制需要更安全的实现"
+    suggested_action: "实施refresh token轮换和黑名单机制"
+  - id: "TEST-002"
+    severity: medium
+    finding: "安全测试场景需要包含渗透测试用例"
+    suggested_action: "添加SQL注入、XSS等安全测试用例"
+
+risk_summary:
+  totals: { critical: 0, high: 1, medium: 2, low: 0 }
+  recommendations:
+    must_fix:
+      - "实施完整的密码安全策略"
+    monitor:
+      - "认证失败率和异常登录行为"
+      - "JWT令牌的安全性和有效期管理"

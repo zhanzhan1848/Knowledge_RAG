@@ -1,0 +1,24 @@
+schema: 1
+story: "2.5"
+story_title: "知识图谱构建"
+gate: PASS
+status_reason: "Neo4j集成方案优秀，图数据建模合理，查询优化和可视化功能完善。"
+reviewer: "Quinn (Test Architect)"
+updated: "2025-01-15T10:48:00Z"
+
+waiver: { active: false }
+
+top_issues:
+  - id: "PERF-004"
+    severity: low
+    finding: "大规模图查询的性能优化可以进一步提升"
+    suggested_action: "考虑图分片和查询缓存策略"
+
+risk_summary:
+  totals: { critical: 0, high: 0, medium: 0, low: 1 }
+  recommendations:
+    must_fix: []
+    monitor:
+      - "知识图谱的构建质量和完整性"
+      - "图查询性能和索引效率"
+      - "实体关系的准确性和一致性"

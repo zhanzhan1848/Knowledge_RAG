@@ -1,0 +1,546 @@
+# Quality Gate Configuration for Story 2.4
+# 实体识别和关系抽取 - 质量门控配置
+
+metadata:
+  story_id: "2.4"
+  story_name: "实体识别和关系抽取"
+  epic: "智能检索和知识图谱构建"
+  version: "1.0"
+  created_date: "2025-01-15"
+  owner: "QA团队"
+  reviewers:
+    - "NLP工程师"
+    - "架构师"
+    - "产品经理"
+  last_updated: "2025-01-15"
+
+# 入口标准 - 开始测试前必须满足的条件
+entry_criteria:
+  functional:
+    - name: "代码完成度"
+      description: "所有功能代码开发完成"
+      status: "required"
+      validation: "代码审查通过，功能实现完整"
+    
+    - name: "单元测试"
+      description: "单元测试覆盖率达标"
+      status: "required"
+      validation: "代码覆盖率 ≥ 80%，所有单元测试通过"
+    
+    - name: "代码质量"
+      description: "代码质量检查通过"
+      status: "required"
+      validation: "SonarQube扫描无阻断性问题"
+    
+    - name: "API文档"
+      description: "API接口文档完整"
+      status: "required"
+      validation: "OpenAPI规范文档完整，接口定义清晰"
+  
+  environment:
+    - name: "测试环境"
+      description: "NER和关系抽取服务部署完成"
+      status: "required"
+      validation: "服务健康检查通过，接口可访问"
+    
+    - name: "模型准备"
+      description: "预训练模型加载完成"
+      status: "required"
+      validation: "实体识别和关系抽取模型正常加载"
+    
+    - name: "测试数据"
+      description: "测试数据集准备完成"
+      status: "required"
+      validation: "标准数据集和领域数据集已准备"
+    
+    - name: "知识库"
+      description: "实体链接知识库可用"
+      status: "required"
+      validation: "知识库服务正常，实体数据完整"
+
+# 出口标准 - 测试完成和发布的条件
+exit_criteria:
+  functional:
+    - name: "实体识别功能"
+      description: "命名实体识别功能验证"
+      threshold: "准确率 ≥ 90%"
+      validation: "所有实体类型识别测试通过"
+    
+    - name: "关系抽取功能"
+      description: "实体关系抽取功能验证"
+      threshold: "准确率 ≥ 85%"
+      validation: "关系抽取测试用例通过率 100%"
+    
+    - name: "领域定制"
+      description: "领域特定实体类型支持"
+      threshold: "配置生效率 100%"
+      validation: "自定义实体类型测试通过"
+    
+    - name: "实体链接"
+      description: "实体链接和消歧功能"
+      threshold: "链接准确率 ≥ 80%"
+      validation: "实体消歧测试通过"
+    
+    - name: "置信度评分"
+      description: "置信度计算和评分"
+      threshold: "评分范围 [0,1]，分布合理"
+      validation: "置信度测试用例通过"
+    
+    - name: "多语言支持"
+      description: "多语言实体识别"
+      threshold: "中文准确率 ≥ 88%，英文准确率 ≥ 90%"
+      validation: "多语言测试场景通过"
+    
+    - name: "标注训练接口"
+      description: "人工标注和模型训练"
+      threshold: "接口功能完整性 100%"
+      validation: "标注和训练流程测试通过"
+  
+  defects:
+    - name: "P0缺陷"
+      description: "阻断性缺陷处理"
+      threshold: "P0缺陷数量 = 0"
+      validation: "所有P0缺陷已修复并验证"
+    
+    - name: "P1缺陷"
+      description: "严重缺陷处理"
+      threshold: "P1缺陷修复率 ≥ 95%"
+      validation: "P1缺陷已修复或有明确计划"
+    
+    - name: "P2缺陷"
+      description: "一般缺陷处理"
+      threshold: "P2缺陷修复率 ≥ 80%"
+      validation: "P2缺陷影响可控"
+  
+  performance:
+    - name: "响应时间"
+      description: "API响应时间性能"
+      threshold: "P95响应时间 < 2秒"
+      validation: "性能测试报告达标"
+    
+    - name: "吞吐量"
+      description: "系统处理能力"
+      threshold: "QPS ≥ 50，批量处理 ≥ 100文档/分钟"
+      validation: "负载测试通过"
+    
+    - name: "并发性能"
+      description: "并发用户支持"
+      threshold: "支持100并发用户"
+      validation: "并发测试无性能衰减"
+    
+    - name: "资源使用"
+      description: "系统资源消耗"
+      threshold: "CPU < 80%，内存 < 4GB"
+      validation: "资源监控数据符合要求"
+    
+    - name: "准确性指标"
+      description: "模型准确性性能"
+      threshold: "实体识别F1 ≥ 0.90，关系抽取F1 ≥ 0.85"
+      validation: "准确性评估报告达标"
+  
+  security:
+    - name: "输入验证"
+      description: "输入安全验证"
+      threshold: "恶意输入防护率 100%"
+      validation: "安全测试无高危漏洞"
+    
+    - name: "数据安全"
+      description: "敏感数据保护"
+      threshold: "数据脱敏率 100%"
+      validation: "敏感信息处理合规"
+    
+    - name: "访问控制"
+      description: "API访问权限控制"
+      threshold: "权限验证通过率 100%"
+      validation: "访问控制测试通过"
+
+# 质量标准定义
+quality_standards:
+  functional:
+    - metric: "功能完整性"
+      target: "100%"
+      measurement: "验收标准覆盖率"
+      tool: "手工测试 + 自动化测试"
+    
+    - metric: "功能正确性"
+      target: "≥ 95%"
+      measurement: "测试用例通过率"
+      tool: "pytest + 自定义测试框架"
+    
+    - metric: "API兼容性"
+      target: "100%"
+      measurement: "接口规范符合度"
+      tool: "OpenAPI验证 + Postman测试"
+    
+    - metric: "错误处理"
+      target: "100%"
+      measurement: "异常场景覆盖率"
+      tool: "边界测试 + 异常注入"
+  
+  non_functional:
+    - metric: "性能表现"
+      target: "P95 < 2秒"
+      measurement: "响应时间分布"
+      tool: "JMeter + Locust"
+    
+    - metric: "吞吐量"
+      target: "≥ 50 QPS"
+      measurement: "每秒请求数"
+      tool: "负载测试工具"
+    
+    - metric: "资源效率"
+      target: "CPU < 80%, Memory < 4GB"
+      measurement: "资源使用率"
+      tool: "Prometheus + Grafana"
+    
+    - metric: "准确性"
+      target: "实体识别 ≥ 90%, 关系抽取 ≥ 85%"
+      measurement: "F1-Score"
+      tool: "scikit-learn metrics"
+    
+    - metric: "可用性"
+      target: "≥ 99.9%"
+      measurement: "服务正常运行时间"
+      tool: "健康检查 + 监控告警"
+    
+    - metric: "一致性"
+      target: "100%"
+      measurement: "多次调用结果一致性"
+      tool: "重复性测试"
+    
+    - metric: "可扩展性"
+      target: "支持自定义实体类型"
+      measurement: "配置灵活性"
+      tool: "配置测试 + 功能验证"
+  
+  code_quality:
+    - metric: "代码覆盖率"
+      target: "≥ 80%"
+      measurement: "行覆盖率和分支覆盖率"
+      tool: "Coverage.py + pytest-cov"
+    
+    - metric: "代码复杂度"
+      target: "圈复杂度 < 10"
+      measurement: "McCabe复杂度"
+      tool: "SonarQube + flake8"
+    
+    - metric: "代码重复率"
+      target: "< 3%"
+      measurement: "重复代码块比例"
+      tool: "SonarQube + PMD"
+    
+    - metric: "技术债务"
+      target: "技术债务比率 < 5%"
+      measurement: "代码质量问题密度"
+      tool: "SonarQube分析"
+
+# 测试场景映射
+test_scenarios:
+  - id: "TS-2.4-001"
+    name: "命名实体识别测试"
+    acceptance_criteria: ["AC1"]
+    test_cases: 10
+    priority: "P0"
+    type: "功能测试"
+    automation: "部分自动化"
+    estimated_effort: "4小时"
+  
+  - id: "TS-2.4-002"
+    name: "关系抽取测试"
+    acceptance_criteria: ["AC2"]
+    test_cases: 8
+    priority: "P0"
+    type: "功能测试"
+    automation: "部分自动化"
+    estimated_effort: "4小时"
+  
+  - id: "TS-2.4-003"
+    name: "领域定制测试"
+    acceptance_criteria: ["AC3"]
+    test_cases: 8
+    priority: "P1"
+    type: "功能测试"
+    automation: "手工测试"
+    estimated_effort: "3小时"
+  
+  - id: "TS-2.4-004"
+    name: "实体链接和消歧测试"
+    acceptance_criteria: ["AC4"]
+    test_cases: 8
+    priority: "P1"
+    type: "功能测试"
+    automation: "部分自动化"
+    estimated_effort: "4小时"
+  
+  - id: "TS-2.4-005"
+    name: "置信度评分测试"
+    acceptance_criteria: ["AC5"]
+    test_cases: 8
+    priority: "P0"
+    type: "功能测试"
+    automation: "自动化"
+    estimated_effort: "3小时"
+  
+  - id: "TS-2.4-006"
+    name: "多语言支持测试"
+    acceptance_criteria: ["AC6"]
+    test_cases: 8
+    priority: "P2"
+    type: "功能测试"
+    automation: "部分自动化"
+    estimated_effort: "3小时"
+  
+  - id: "TS-2.4-007"
+    name: "人工标注和模型训练接口测试"
+    acceptance_criteria: ["AC7"]
+    test_cases: 8
+    priority: "P1"
+    type: "集成测试"
+    automation: "手工测试"
+    estimated_effort: "4小时"
+
+# 风险评估
+risks:
+  high:
+    - name: "模型准确性风险"
+      description: "实体识别和关系抽取准确率可能不达标"
+      impact: "影响核心功能质量"
+      probability: "中等"
+      mitigation: "使用多个评估数据集，设置准确率阈值，持续模型优化"
+      validation_tests:
+        - "TS-2.4-001"
+        - "TS-2.4-002"
+        - "TS-2.4-005"
+    
+    - name: "性能瓶颈风险"
+      description: "大规模文本处理时性能可能下降"
+      impact: "影响系统可用性"
+      probability: "中等"
+      mitigation: "实施性能测试，优化算法，合理资源配置"
+      validation_tests:
+        - "性能测试套件"
+        - "负载测试"
+    
+    - name: "多语言兼容性风险"
+      description: "不同语言处理效果可能存在显著差异"
+      impact: "影响多语言场景使用"
+      probability: "中等"
+      mitigation: "针对性多语言测试，语言特定优化"
+      validation_tests:
+        - "TS-2.4-006"
+  
+  medium:
+    - name: "领域适应性风险"
+      description: "特定领域实体识别效果可能不理想"
+      impact: "影响领域应用效果"
+      probability: "低"
+      mitigation: "领域数据集测试，支持模型微调"
+      validation_tests:
+        - "TS-2.4-003"
+    
+    - name: "实体链接准确性风险"
+      description: "实体消歧和链接可能存在错误"
+      impact: "影响知识图谱质量"
+      probability: "低"
+      mitigation: "完善知识库，优化链接算法"
+      validation_tests:
+        - "TS-2.4-004"
+
+# 决策矩阵
+decision_matrix:
+  go_criteria:
+    functional:
+      - "所有P0测试场景通过率 = 100%"
+      - "所有P1测试场景通过率 ≥ 95%"
+      - "实体识别准确率 ≥ 90%"
+      - "关系抽取准确率 ≥ 85%"
+    
+    performance:
+      - "P95响应时间 < 2秒"
+      - "QPS ≥ 50"
+      - "并发支持 ≥ 100用户"
+      - "资源使用率在合理范围"
+    
+    reliability:
+      - "服务可用性 ≥ 99.9%"
+      - "P0缺陷数量 = 0"
+      - "P1缺陷修复率 ≥ 95%"
+    
+    security:
+      - "安全测试无高危漏洞"
+      - "输入验证防护率 100%"
+      - "敏感数据处理合规"
+  
+  no_go_criteria:
+    - "任何P0测试场景失败"
+    - "实体识别准确率 < 85%"
+    - "关系抽取准确率 < 80%"
+    - "存在未修复的P0缺陷"
+    - "响应时间 > 5秒"
+    - "存在高危安全漏洞"
+
+# 工具集成
+tools:
+  functional_testing:
+    - name: "Postman"
+      purpose: "API功能测试"
+      configuration: "测试集合和环境配置"
+    
+    - name: "pytest"
+      purpose: "Python单元和集成测试"
+      configuration: "测试配置文件和插件"
+    
+    - name: "spaCy"
+      purpose: "NLP模型测试"
+      configuration: "模型加载和评估配置"
+    
+    - name: "scikit-learn"
+      purpose: "准确性评估"
+      configuration: "评估指标和报告配置"
+  
+  performance_testing:
+    - name: "JMeter"
+      purpose: "负载和性能测试"
+      configuration: "测试计划和场景配置"
+    
+    - name: "Locust"
+      purpose: "并发性能测试"
+      configuration: "用户行为脚本"
+  
+  security_testing:
+    - name: "OWASP ZAP"
+      purpose: "安全漏洞扫描"
+      configuration: "扫描策略和规则"
+    
+    - name: "Bandit"
+      purpose: "Python代码安全检查"
+      configuration: "安全规则配置"
+  
+  code_quality:
+    - name: "SonarQube"
+      purpose: "代码质量分析"
+      configuration: "质量门禁和规则配置"
+    
+    - name: "Coverage.py"
+      purpose: "代码覆盖率分析"
+      configuration: "覆盖率报告配置"
+    
+    - name: "flake8"
+      purpose: "代码风格检查"
+      configuration: "编码规范配置"
+  
+  monitoring:
+    - name: "Prometheus"
+      purpose: "性能指标监控"
+      configuration: "指标收集和告警规则"
+    
+    - name: "Grafana"
+      purpose: "监控数据可视化"
+      configuration: "仪表板和图表配置"
+    
+    - name: "ELK Stack"
+      purpose: "日志分析和监控"
+      configuration: "日志收集和分析配置"
+
+# 报告配置
+reporting:
+  test_reports:
+    - name: "功能测试报告"
+      format: "HTML + JSON"
+      frequency: "每日"
+      recipients: ["QA团队", "开发团队"]
+    
+    - name: "性能测试报告"
+      format: "PDF + Dashboard"
+      frequency: "每周"
+      recipients: ["架构师", "运维团队"]
+    
+    - name: "准确性评估报告"
+      format: "JSON + 可视化图表"
+      frequency: "每次测试"
+      recipients: ["NLP工程师", "数据科学家"]
+  
+  metrics_dashboard:
+    - name: "实时质量仪表板"
+      url: "http://grafana.internal/dashboard/story-2-4"
+      metrics: ["测试通过率", "缺陷趋势", "性能指标", "准确性指标"]
+    
+    - name: "准确性监控面板"
+      url: "http://mlflow.internal/experiments/ner-relation"
+      metrics: ["F1-Score", "精确率", "召回率", "置信度分布"]
+
+# 相关文档
+related_documents:
+  - name: "Story 2.4 测试设计文档"
+    path: "./test-design-2.4.md"
+    type: "测试设计"
+  
+  - name: "Story 2.4 可追溯性矩阵"
+    path: "./traceability-matrix-2.4.md"
+    type: "可追溯性"
+  
+  - name: "NER和关系抽取API规范"
+    path: "../api/ner-relation-api.yaml"
+    type: "接口文档"
+  
+  - name: "实体识别模型文档"
+    path: "../models/ner-model-spec.md"
+    type: "模型文档"
+
+# 审批流程
+approval_workflow:
+  reviewers:
+    - role: "QA负责人"
+      name: "张测试"
+      email: "zhang.test@company.com"
+      required: true
+    
+    - role: "NLP工程师"
+      name: "李算法"
+      email: "li.algorithm@company.com"
+      required: true
+    
+    - role: "架构师"
+      name: "王架构"
+      email: "wang.arch@company.com"
+      required: true
+    
+    - role: "产品经理"
+      name: "赵产品"
+      email: "zhao.product@company.com"
+      required: false
+  
+  approval_stages:
+    - stage: "技术审查"
+      approvers: ["QA负责人", "NLP工程师"]
+      criteria: "技术实现和测试方案合理性"
+    
+    - stage: "架构审查"
+      approvers: ["架构师"]
+      criteria: "系统架构和集成方案"
+    
+    - stage: "业务审查"
+      approvers: ["产品经理"]
+      criteria: "业务需求和用户体验"
+
+# 版本历史
+version_history:
+  - version: "1.0"
+    date: "2025-01-15"
+    author: "QA团队"
+    changes: "初始版本创建"
+    approved_by: "待审批"
+
+# 联系信息
+contacts:
+  qa_team:
+    email: "qa-team@company.com"
+    slack: "#qa-story-2-4"
+  
+  dev_team:
+    email: "nlp-dev@company.com"
+    slack: "#nlp-development"
+  
+  support:
+    email: "support@company.com"
+    phone: "+86-400-123-4567"
