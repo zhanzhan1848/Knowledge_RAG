@@ -49,27 +49,27 @@ async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     # 启动时执行
     logger.info("GraphRAG服务启动中...")
-    
+
     try:
         # 初始化服务
         await service_manager.startup()
-        
+
         # 记录启动指标
         metrics_collector.increment("service_startups")
-        
+
         logger.info(f"GraphRAG服务启动成功，监听端口: {settings.PORT}")
-        
+
         yield
-        
+
     except Exception as e:
         logger.error(f"GraphRAG服务启动失败: {e}")
         metrics_collector.increment("service_startup_failures")
         raise
-    
+
     finally:
         # 关闭时执行
         logger.info("GraphRAG服务关闭中...")
-        
+
         try:
             await service_manager.shutdown()
             metrics_collector.increment("service_shutdowns")
@@ -86,7 +86,7 @@ app = FastAPI(
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
     openapi_url="/openapi.json" if settings.DEBUG else None,
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 
@@ -114,17 +114,17 @@ app.add_middleware(LoggingMiddleware)
 async def http_exception_handler(request: Request, exc: HTTPException):
     """HTTP异常处理器"""
     metrics_collector.increment(f"http_errors_{exc.status_code}")
-    
+
     return JSONResponse(
         status_code=exc.status_code,
         content={
             "error": {
                 "code": exc.status_code,
                 "message": exc.detail,
-                "type": "HTTPException"
+                "type": "HTTPException",
             },
-            "timestamp": metrics_collector.get_current_timestamp()
-        }
+            "timestamp": metrics_collector.get_current_timestamp(),
+        },
     )
 
 
@@ -133,17 +133,17 @@ async def general_exception_handler(request: Request, exc: Exception):
     """通用异常处理器"""
     logger.error(f"未处理的异常: {exc}", exc_info=True)
     metrics_collector.increment("unhandled_exceptions")
-    
+
     return JSONResponse(
         status_code=500,
         content={
             "error": {
                 "code": 500,
                 "message": "内部服务器错误" if not settings.DEBUG else str(exc),
-                "type": "InternalServerError"
+                "type": "InternalServerError",
             },
-            "timestamp": metrics_collector.get_current_timestamp()
-        }
+            "timestamp": metrics_collector.get_current_timestamp(),
+        },
     )
 
 
@@ -162,7 +162,7 @@ async def root():
         "status": "running",
         "docs_url": "/docs" if settings.DEBUG else None,
         "health_url": "/api/v1/health",
-        "metrics_url": "/api/v1/metrics"
+        "metrics_url": "/api/v1/metrics",
     }
 
 
@@ -173,22 +173,19 @@ async def health_check():
     try:
         # 检查服务状态
         status = await service_manager.get_status()
-        
-        is_healthy = (
-            status.get("manager_initialized", False) and
-            all(
-                service.get("healthy", False) 
-                for service in status.get("services", {}).values()
-            )
+
+        is_healthy = status.get("manager_initialized", False) and all(
+            service.get("healthy", False)
+            for service in status.get("services", {}).values()
         )
-        
+
         return {
             "status": "healthy" if is_healthy else "unhealthy",
             "timestamp": metrics_collector.get_current_timestamp(),
             "service": "graph-service",
-            "version": "1.0.0"
+            "version": "1.0.0",
         }
-        
+
     except Exception as e:
         logger.error(f"健康检查失败: {e}")
         return {
@@ -196,7 +193,7 @@ async def health_check():
             "error": str(e),
             "timestamp": metrics_collector.get_current_timestamp(),
             "service": "graph-service",
-            "version": "1.0.0"
+            "version": "1.0.0",
         }
 
 
@@ -208,7 +205,7 @@ async def get_metrics():
         return {
             "metrics": metrics_collector.get_metrics(),
             "timestamp": metrics_collector.get_current_timestamp(),
-            "service": "graph-service"
+            "service": "graph-service",
         }
     except Exception as e:
         logger.error(f"获取指标失败: {e}")
@@ -217,26 +214,27 @@ async def get_metrics():
 
 # 自定义OpenAPI文档
 if settings.DEBUG:
+
     def custom_openapi():
         """自定义OpenAPI规范"""
         if app.openapi_schema:
             return app.openapi_schema
-        
+
         openapi_schema = get_openapi(
             title="Knowledge RAG - GraphRAG Service API",
             version="1.0.0",
             description="基于GraphRAG的知识图谱服务API文档",
             routes=app.routes,
         )
-        
+
         # 添加自定义信息
         openapi_schema["info"]["x-logo"] = {
             "url": "https://fastapi.tiangolo.com/img/logo-margin/logo-teal.png"
         }
-        
+
         app.openapi_schema = openapi_schema
         return app.openapi_schema
-    
+
     app.openapi = custom_openapi
 
 
@@ -244,7 +242,7 @@ if settings.DEBUG:
 def start_server():
     """启动服务器"""
     import uvicorn
-    
+
     # 配置uvicorn
     config = uvicorn.Config(
         app=app,
@@ -256,11 +254,11 @@ def start_server():
         access_log=settings.ACCESS_LOG,
         use_colors=True,
         server_header=False,
-        date_header=False
+        date_header=False,
     )
-    
+
     server = uvicorn.Server(config)
-    
+
     try:
         logger.info(f"启动GraphRAG服务: http://{settings.HOST}:{settings.PORT}")
         server.run()
@@ -276,4 +274,4 @@ if __name__ == "__main__":
 
 
 # 导出应用实例
-__all__ = ['app', 'start_server']
+__all__ = ["app", "start_server"]

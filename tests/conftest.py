@@ -13,7 +13,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 测试环境配置
 os.environ.setdefault("ENVIRONMENT", "testing")
-os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://postgres:postgres123@localhost:5432/test_db")
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql+asyncpg://postgres:postgres123@localhost:5432/test_db"
+)
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 os.environ.setdefault("JWT_SECRET_KEY", "test_jwt_secret_key_for_testing_only")
 os.environ.setdefault("OPENAI_API_KEY", "test_openai_key")
@@ -32,7 +34,7 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
 async def async_client():
     """创建异步 HTTP 客户端用于 API 测试"""
     from httpx import AsyncClient
-    
+
     async with AsyncClient() as client:
         yield client
 
@@ -64,19 +66,19 @@ def mock_redis():
 def mock_openai_client():
     """模拟 OpenAI 客户端"""
     mock_client = MagicMock()
-    
+
     # 模拟 chat completions
     mock_response = MagicMock()
     mock_response.choices = [MagicMock()]
     mock_response.choices[0].message.content = "Test response from OpenAI"
     mock_client.chat.completions.create.return_value = mock_response
-    
+
     # 模拟 embeddings
     mock_embedding_response = MagicMock()
     mock_embedding_response.data = [MagicMock()]
     mock_embedding_response.data[0].embedding = [0.1] * 1536  # 模拟 1536 维向量
     mock_client.embeddings.create.return_value = mock_embedding_response
-    
+
     return mock_client
 
 
@@ -84,7 +86,7 @@ def mock_openai_client():
 def mock_weaviate_client():
     """模拟 Weaviate 客户端"""
     mock_client = MagicMock()
-    
+
     # 模拟查询结果
     mock_client.query.get.return_value.with_near_vector.return_value.with_limit.return_value.do.return_value = {
         "data": {
@@ -93,16 +95,16 @@ def mock_weaviate_client():
                     {
                         "content": "Test document content",
                         "metadata": {"source": "test.pdf"},
-                        "_additional": {"distance": 0.1}
+                        "_additional": {"distance": 0.1},
                     }
                 ]
             }
         }
     }
-    
+
     # 模拟数据插入
     mock_client.data_object.create.return_value = {"id": "test-uuid-123"}
-    
+
     return mock_client
 
 
@@ -112,16 +114,14 @@ def mock_neo4j_driver():
     mock_driver = MagicMock()
     mock_session = MagicMock()
     mock_result = MagicMock()
-    
+
     # 模拟查询结果
     mock_result.single.return_value = {"count": 1}
-    mock_result.data.return_value = [
-        {"n": {"name": "Test Node", "type": "Entity"}}
-    ]
-    
+    mock_result.data.return_value = [{"n": {"name": "Test Node", "type": "Entity"}}]
+
     mock_session.run.return_value = mock_result
     mock_driver.session.return_value.__enter__.return_value = mock_session
-    
+
     return mock_driver
 
 
@@ -129,7 +129,7 @@ def mock_neo4j_driver():
 def mock_elasticsearch_client():
     """模拟 Elasticsearch 客户端"""
     mock_client = AsyncMock()
-    
+
     # 模拟搜索结果
     mock_client.search.return_value = {
         "hits": {
@@ -140,17 +140,17 @@ def mock_elasticsearch_client():
                     "_source": {
                         "content": "Test document content",
                         "title": "Test Document",
-                        "metadata": {"source": "test.pdf"}
+                        "metadata": {"source": "test.pdf"},
                     },
-                    "_score": 0.9
+                    "_score": 0.9,
                 }
-            ]
+            ],
         }
     }
-    
+
     # 模拟索引操作
     mock_client.index.return_value = {"_id": "test-doc-1", "result": "created"}
-    
+
     return mock_client
 
 
@@ -160,10 +160,10 @@ def mock_rabbitmq_connection():
     mock_connection = AsyncMock()
     mock_channel = AsyncMock()
     mock_queue = AsyncMock()
-    
+
     mock_connection.channel.return_value = mock_channel
     mock_channel.declare_queue.return_value = mock_queue
-    
+
     return mock_connection
 
 
@@ -179,7 +179,7 @@ def sample_document_data():
             "author": "Test Author",
             "created_at": "2024-01-01T00:00:00Z",
             "file_size": 1024,
-            "mime_type": "application/pdf"
+            "mime_type": "application/pdf",
         },
         "chunks": [
             {
@@ -187,16 +187,16 @@ def sample_document_data():
                 "content": "This is the first chunk of the test document.",
                 "start_index": 0,
                 "end_index": 50,
-                "embedding": [0.1] * 1536
+                "embedding": [0.1] * 1536,
             },
             {
                 "id": "chunk-2",
                 "content": "This is the second chunk of the test document.",
                 "start_index": 51,
                 "end_index": 100,
-                "embedding": [0.2] * 1536
-            }
-        ]
+                "embedding": [0.2] * 1536,
+            },
+        ],
     }
 
 
@@ -211,7 +211,7 @@ def sample_user_data():
         "is_active": True,
         "is_superuser": False,
         "created_at": "2024-01-01T00:00:00Z",
-        "updated_at": "2024-01-01T00:00:00Z"
+        "updated_at": "2024-01-01T00:00:00Z",
     }
 
 
@@ -223,7 +223,7 @@ def sample_qa_data():
         "answer": "Knowledge RAG is a Retrieval-Augmented Generation system for knowledge management.",
         "context": [
             "Knowledge RAG combines retrieval and generation capabilities.",
-            "It helps users find and generate relevant information from documents."
+            "It helps users find and generate relevant information from documents.",
         ],
         "sources": [
             {"document_id": "doc-123", "chunk_id": "chunk-1", "relevance_score": 0.9}
@@ -231,8 +231,8 @@ def sample_qa_data():
         "metadata": {
             "model_used": "gpt-4",
             "response_time": 1.5,
-            "confidence_score": 0.85
-        }
+            "confidence_score": 0.85,
+        },
     }
 
 
@@ -247,8 +247,8 @@ def sample_graph_data():
                 "type": "System",
                 "properties": {
                     "description": "A retrieval-augmented generation system",
-                    "category": "AI System"
-                }
+                    "category": "AI System",
+                },
             },
             {
                 "id": "entity-2",
@@ -256,9 +256,9 @@ def sample_graph_data():
                 "type": "Process",
                 "properties": {
                     "description": "Process for handling documents",
-                    "category": "Data Processing"
-                }
-            }
+                    "category": "Data Processing",
+                },
+            },
         ],
         "relationships": [
             {
@@ -268,10 +268,10 @@ def sample_graph_data():
                 "type": "USES",
                 "properties": {
                     "strength": 0.8,
-                    "description": "Knowledge RAG uses document processing"
-                }
+                    "description": "Knowledge RAG uses document processing",
+                },
             }
-        ]
+        ],
     }
 
 
@@ -279,28 +279,18 @@ def sample_graph_data():
 pytestmark = [
     pytest.mark.asyncio,
     pytest.mark.filterwarnings("ignore::DeprecationWarning"),
-    pytest.mark.filterwarnings("ignore::PendingDeprecationWarning")
+    pytest.mark.filterwarnings("ignore::PendingDeprecationWarning"),
 ]
 
 
 # 测试配置
 def pytest_configure(config):
     """pytest 配置"""
-    config.addinivalue_line(
-        "markers", "unit: 标记单元测试"
-    )
-    config.addinivalue_line(
-        "markers", "integration: 标记集成测试"
-    )
-    config.addinivalue_line(
-        "markers", "e2e: 标记端到端测试"
-    )
-    config.addinivalue_line(
-        "markers", "slow: 标记慢速测试"
-    )
-    config.addinivalue_line(
-        "markers", "performance: 标记性能测试"
-    )
+    config.addinivalue_line("markers", "unit: 标记单元测试")
+    config.addinivalue_line("markers", "integration: 标记集成测试")
+    config.addinivalue_line("markers", "e2e: 标记端到端测试")
+    config.addinivalue_line("markers", "slow: 标记慢速测试")
+    config.addinivalue_line("markers", "performance: 标记性能测试")
 
 
 # 测试收集配置
@@ -308,5 +298,8 @@ def pytest_collection_modifyitems(config, items):
     """修改测试收集配置"""
     # 为没有标记的测试添加 unit 标记
     for item in items:
-        if not any(mark.name in ["unit", "integration", "e2e", "performance"] for mark in item.iter_markers()):
+        if not any(
+            mark.name in ["unit", "integration", "e2e", "performance"]
+            for mark in item.iter_markers()
+        ):
             item.add_marker(pytest.mark.unit)

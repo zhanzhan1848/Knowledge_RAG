@@ -30,7 +30,7 @@ metrics = MetricsCollector()
 
 class ServiceManager:
     """服务管理器，负责管理所有服务实例的生命周期"""
-    
+
     def __init__(self):
         """初始化服务管理器"""
         self._graphrag_manager: Optional[GraphRAGManager] = None
@@ -38,59 +38,59 @@ class ServiceManager:
         self._settings: Optional[Settings] = None
         self._initialized = False
         self._lock = asyncio.Lock()
-        
+
         logger.info("服务管理器初始化完成")
-    
+
     async def initialize(self):
         """初始化所有服务"""
         async with self._lock:
             if self._initialized:
                 return
-            
+
             try:
                 logger.info("开始初始化GraphRAG服务...")
-                
+
                 # 获取配置
                 self._settings = get_settings()
-                
+
                 # 初始化Neo4j管理器
                 logger.info("初始化Neo4j管理器...")
                 self._neo4j_manager = Neo4jManager()
                 neo4j_connected = await self._neo4j_manager.connect()
-                
+
                 if not neo4j_connected:
                     logger.warning("Neo4j连接失败，图数据库功能将不可用")
                 else:
                     logger.info("Neo4j管理器初始化成功")
-                
+
                 # 初始化GraphRAG管理器
                 logger.info("初始化GraphRAG管理器...")
                 self._graphrag_manager = GraphRAGManager()
                 graphrag_initialized = await self._graphrag_manager.initialize()
-                
+
                 if not graphrag_initialized:
                     logger.warning("GraphRAG管理器初始化失败")
                 else:
                     logger.info("GraphRAG管理器初始化成功")
-                
+
                 self._initialized = True
                 metrics.increment("service_initializations")
                 logger.info("GraphRAG服务初始化完成")
-                
+
             except Exception as e:
                 logger.error(f"服务初始化失败: {e}")
                 metrics.increment("service_initialization_failures")
                 raise
-    
+
     async def cleanup(self):
         """清理所有服务资源"""
         async with self._lock:
             if not self._initialized:
                 return
-            
+
             try:
                 logger.info("开始清理GraphRAG服务资源...")
-                
+
                 # 清理GraphRAG管理器
                 if self._graphrag_manager:
                     try:
@@ -100,7 +100,7 @@ class ServiceManager:
                         logger.error(f"清理GraphRAG管理器失败: {e}")
                     finally:
                         self._graphrag_manager = None
-                
+
                 # 清理Neo4j管理器
                 if self._neo4j_manager:
                     try:
@@ -110,37 +110,37 @@ class ServiceManager:
                         logger.error(f"清理Neo4j管理器失败: {e}")
                     finally:
                         self._neo4j_manager = None
-                
+
                 self._initialized = False
                 metrics.increment("service_cleanups")
                 logger.info("GraphRAG服务资源清理完成")
-                
+
             except Exception as e:
                 logger.error(f"服务资源清理失败: {e}")
                 metrics.increment("service_cleanup_failures")
-    
+
     def get_graphrag_manager(self) -> Optional[GraphRAGManager]:
         """获取GraphRAG管理器实例"""
         if not self._initialized:
             logger.warning("服务未初始化，无法获取GraphRAG管理器")
             return None
         return self._graphrag_manager
-    
+
     def get_neo4j_manager(self) -> Optional[Neo4jManager]:
         """获取Neo4j管理器实例"""
         if not self._initialized:
             logger.warning("服务未初始化，无法获取Neo4j管理器")
             return None
         return self._neo4j_manager
-    
+
     def get_settings(self) -> Optional[Settings]:
         """获取配置设置"""
         return self._settings or get_settings()
-    
+
     def is_initialized(self) -> bool:
         """检查服务是否已初始化"""
         return self._initialized
-    
+
     async def health_check(self) -> Dict[str, Any]:
         """服务健康检查"""
         try:
@@ -148,15 +148,15 @@ class ServiceManager:
                 return {
                     "healthy": False,
                     "message": "服务未初始化",
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": datetime.now().isoformat(),
                 }
-            
+
             health_status = {
                 "healthy": True,
                 "services": {},
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
             # 检查GraphRAG管理器
             if self._graphrag_manager:
                 graphrag_health = await self._graphrag_manager.health_check()
@@ -166,10 +166,10 @@ class ServiceManager:
             else:
                 health_status["services"]["graphrag"] = {
                     "healthy": False,
-                    "message": "GraphRAG管理器未初始化"
+                    "message": "GraphRAG管理器未初始化",
                 }
                 health_status["healthy"] = False
-            
+
             # 检查Neo4j管理器
             if self._neo4j_manager:
                 neo4j_health = await self._neo4j_manager.health_check()
@@ -179,18 +179,18 @@ class ServiceManager:
             else:
                 health_status["services"]["neo4j"] = {
                     "healthy": False,
-                    "message": "Neo4j管理器未初始化"
+                    "message": "Neo4j管理器未初始化",
                 }
                 health_status["healthy"] = False
-            
+
             return health_status
-            
+
         except Exception as e:
             logger.error(f"健康检查失败: {e}")
             return {
                 "healthy": False,
                 "error": str(e),
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
 
 
@@ -210,7 +210,7 @@ def get_service_manager() -> ServiceManager:
 async def lifespan_context():
     """应用生命周期上下文管理器"""
     service_manager = get_service_manager()
-    
+
     try:
         # 启动时初始化服务
         await service_manager.initialize()
@@ -224,35 +224,36 @@ async def lifespan_context():
 
 # ==================== 依赖注入函数 ====================
 
+
 async def get_graphrag_manager() -> GraphRAGManager:
     """获取GraphRAG管理器依赖"""
     service_manager = get_service_manager()
-    
+
     if not service_manager.is_initialized():
         await service_manager.initialize()
-    
+
     graphrag_manager = service_manager.get_graphrag_manager()
-    
+
     if graphrag_manager is None:
         logger.error("GraphRAG管理器未初始化")
         raise RuntimeError("GraphRAG管理器未初始化")
-    
+
     return graphrag_manager
 
 
 async def get_neo4j_manager() -> Neo4jManager:
     """获取Neo4j管理器依赖"""
     service_manager = get_service_manager()
-    
+
     if not service_manager.is_initialized():
         await service_manager.initialize()
-    
+
     neo4j_manager = service_manager.get_neo4j_manager()
-    
+
     if neo4j_manager is None:
         logger.error("Neo4j管理器未初始化")
         raise RuntimeError("Neo4j管理器未初始化")
-    
+
     return neo4j_manager
 
 
@@ -260,26 +261,27 @@ def get_config_settings() -> Settings:
     """获取配置设置依赖"""
     service_manager = get_service_manager()
     settings = service_manager.get_settings()
-    
+
     if settings is None:
         logger.error("配置设置未初始化")
         raise RuntimeError("配置设置未初始化")
-    
+
     return settings
 
 
 async def get_service_status() -> Dict[str, Any]:
     """获取服务状态依赖"""
     service_manager = get_service_manager()
-    
+
     return {
         "initialized": service_manager.is_initialized(),
         "timestamp": datetime.now().isoformat(),
-        "health": await service_manager.health_check()
+        "health": await service_manager.health_check(),
     }
 
 
 # ==================== 初始化和清理函数 ====================
+
 
 async def initialize_services():
     """初始化所有服务"""
@@ -295,6 +297,7 @@ async def cleanup_services():
 
 # ==================== 健康检查函数 ====================
 
+
 async def check_service_health() -> Dict[str, Any]:
     """检查服务健康状态"""
     service_manager = get_service_manager()
@@ -303,20 +306,21 @@ async def check_service_health() -> Dict[str, Any]:
 
 # ==================== 服务重启函数 ====================
 
+
 async def restart_services():
     """重启所有服务"""
     try:
         logger.info("开始重启GraphRAG服务...")
-        
+
         # 清理现有服务
         await cleanup_services()
-        
+
         # 重新初始化服务
         await initialize_services()
-        
+
         logger.info("GraphRAG服务重启完成")
         metrics.increment("service_restarts")
-        
+
     except Exception as e:
         logger.error(f"服务重启失败: {e}")
         metrics.increment("service_restart_failures")
@@ -325,15 +329,15 @@ async def restart_services():
 
 # 导出
 __all__ = [
-    'ServiceManager',
-    'get_service_manager',
-    'lifespan_context',
-    'get_graphrag_manager',
-    'get_neo4j_manager',
-    'get_config_settings',
-    'get_service_status',
-    'initialize_services',
-    'cleanup_services',
-    'check_service_health',
-    'restart_services'
+    "ServiceManager",
+    "get_service_manager",
+    "lifespan_context",
+    "get_graphrag_manager",
+    "get_neo4j_manager",
+    "get_config_settings",
+    "get_service_status",
+    "initialize_services",
+    "cleanup_services",
+    "check_service_health",
+    "restart_services",
 ]

@@ -42,7 +42,7 @@ vector_manager: Optional[VectorManager] = None
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     global vector_manager
-    
+
     # 启动时初始化
     logger.info("正在启动向量服务...")
     try:
@@ -67,7 +67,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # 添加中间件
@@ -99,7 +99,7 @@ async def vector_service_exception_handler(request, exc: VectorServiceException)
     logger.error(f"向量服务异常: {exc.detail}")
     return JSONResponse(
         status_code=exc.status_code,
-        content={"error": exc.detail, "type": "VectorServiceError"}
+        content={"error": exc.detail, "type": "VectorServiceError"},
     )
 
 
@@ -109,7 +109,7 @@ async def general_exception_handler(request, exc: Exception):
     logger.error(f"未处理的异常: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
-        content={"error": "内部服务器错误", "type": "InternalServerError"}
+        content={"error": "内部服务器错误", "type": "InternalServerError"},
     )
 
 
@@ -118,10 +118,14 @@ async def general_exception_handler(request, exc: Exception):
 async def health_check():
     """健康检查端点"""
     health_checker = HealthChecker()
-    
+
     # 检查向量管理器状态
-    vector_status = "healthy" if vector_manager and await vector_manager.health_check() else "unhealthy"
-    
+    vector_status = (
+        "healthy"
+        if vector_manager and await vector_manager.health_check()
+        else "unhealthy"
+    )
+
     health_status = {
         "status": "healthy" if vector_status == "healthy" else "unhealthy",
         "timestamp": health_checker.get_timestamp(),
@@ -129,10 +133,10 @@ async def health_check():
         "components": {
             "vector_manager": vector_status,
             "database": await health_checker.check_database(),
-            "redis": await health_checker.check_redis()
-        }
+            "redis": await health_checker.check_redis(),
+        },
     }
-    
+
     status_code = 200 if health_status["status"] == "healthy" else 503
     return JSONResponse(content=health_status, status_code=status_code)
 
@@ -142,7 +146,7 @@ async def metrics():
     """指标端点"""
     if not vector_manager:
         raise HTTPException(status_code=503, detail="向量服务未初始化")
-    
+
     metrics_data = await vector_manager.get_metrics()
     return JSONResponse(content=metrics_data)
 
@@ -161,15 +165,11 @@ async def root():
         "service": "Knowledge RAG - 向量服务",
         "version": "1.0.0",
         "status": "running",
-        "docs": "/docs" if settings.DEBUG else "disabled"
+        "docs": "/docs" if settings.DEBUG else "disabled",
     }
 
 
 if __name__ == "__main__":
     uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8003,
-        reload=settings.DEBUG,
-        log_level="info"
+        "main:app", host="0.0.0.0", port=8003, reload=settings.DEBUG, log_level="info"
     )
