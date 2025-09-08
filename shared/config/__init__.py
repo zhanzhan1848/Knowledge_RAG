@@ -9,7 +9,54 @@ Author: Knowledge RAG Team
 Date: 2024
 """
 
-from .graphrag_config import *
-from .weaviate_config import *
+from .graphrag_config import (
+    GraphRAGConfig,
+    GraphRAGStorageType,
+    GraphRAGLLMType,
+    GraphRAGEmbeddingType,
+    GraphRAGStorageConfig,
+    GraphRAGLLMConfig,
+    GraphRAGEmbeddingConfig,
+    GraphRAGChunkingConfig,
+    GraphRAGEntityExtractionConfig,
+    GraphRAGCommunityConfig,
+    GraphRAGSummarizationConfig,
+    GraphRAGConfigManager,
+    graphrag_config,
+    graphrag_manager,
+)
+from .weaviate_config import (
+    WeaviateConfig,
+    WeaviateVectorizer,
+    WeaviateSchemaManager,
+    WeaviateConnectionManager,
+    weaviate_config,
+    weaviate_connection,
+    weaviate_schema,
+)
 
-__all__ = []
+__all__ = [
+    # GraphRAG 相关
+    "GraphRAGConfig",
+    "GraphRAGStorageType",
+    "GraphRAGLLMType",
+    "GraphRAGEmbeddingType",
+    "GraphRAGStorageConfig",
+    "GraphRAGLLMConfig",
+    "GraphRAGEmbeddingConfig",
+    "GraphRAGChunkingConfig",
+    "GraphRAGEntityExtractionConfig",
+    "GraphRAGCommunityConfig",
+    "GraphRAGSummarizationConfig",
+    "GraphRAGConfigManager",
+    "graphrag_config",
+    "graphrag_manager",
+    # Weaviate 相关
+    "WeaviateConfig",
+    "WeaviateVectorizer",
+    "WeaviateSchemaManager",
+    "WeaviateConnectionManager",
+    "weaviate_config",
+    "weaviate_connection",
+    "weaviate_schema",
+]

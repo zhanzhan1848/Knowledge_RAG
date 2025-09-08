@@ -12,4 +12,8 @@ Date: 2024
 from .config import Settings
 from .dependencies import get_embedding_service, get_vector_manager
 
-__all__ = ["Settings", "get_embedding_service", "get_vector_manager"]
+__all__ = [
+    "Settings",
+    "get_embedding_service",
+    "get_vector_manager",
+]
