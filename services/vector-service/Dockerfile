@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     libblas-dev \
     liblapack-dev \
-    libatlas-base-dev \
+    libopenblas-dev \
     gfortran \
     && curl -LsSf https://astral.sh/uv/install.sh | sh \
     && rm -rf /var/lib/apt/lists/*
