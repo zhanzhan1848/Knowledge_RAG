@@ -55,16 +55,16 @@ jobs:
       run: uv run --with black black --check --diff .
       
     - name: Run isort (Import Sorting)
-      run: uv run --with isort --check-only --diff .
+      run: uv run --with isort isort --check-only --diff .
       
     - name: Run Flake8 (Linting)
-      run: uv run --with flake8 .
+      run: uv run --with flake8 flake8 .
       
     - name: Run MyPy (Type Checking)
-      run: uv run --with mypy services/ shared/ libs/
+      run: uv run --with mypy mypy services/ shared/ libs/
       
     - name: Run Bandit (Security Linting)
-      run: uv run --with bandit -r services/ shared/ libs/
+      run: uv run --with bandit bandit -r services/ shared/ libs/
       
     - name: Upload code quality results
       uses: actions/upload-artifact@v4
@@ -138,7 +138,7 @@ jobs:
         REDIS_URL: redis://localhost:6379/0
         ENVIRONMENT: testing
       run: |
-        uv run --with pytest tests/unit/ -v --cov=services --cov=shared --cov=libs \
+        uv run --with pytest pytest tests/unit/ -v --cov=services --cov=shared --cov=libs \
                --cov-report=xml --cov-report=html --cov-report=term
         
     - name: Upload coverage reports
