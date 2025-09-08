@@ -106,7 +106,7 @@ jobs:
         output-file: sbom-${{ matrix.service }}.spdx.json
         
     - name: Upload SBOM
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: sbom-${{ matrix.service }}
         path: sbom-${{ matrix.service }}.spdx.json
@@ -446,7 +446,7 @@ jobs:
         cat deployment-record.json
         
     - name: Upload deployment record
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: deployment-record-production
         path: deployment-record.json

@@ -57,7 +57,7 @@ jobs:
         semgrep --config=auto --json --output=semgrep-report.json services/ shared/ libs/ || true
         
     - name: Upload security scan results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-scan-results
@@ -100,7 +100,7 @@ jobs:
         output: 'trivy-results.json'
         
     - name: Upload Trivy results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: trivy-scan-results
@@ -159,7 +159,7 @@ jobs:
         output: 'trivy-${{ matrix.service }}.json'
         
     - name: Upload Docker scan results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: docker-scan-results-${{ matrix.service }}
@@ -195,7 +195,7 @@ jobs:
         detect-secrets scan --all-files --baseline .secrets.baseline || true
         
     - name: Upload secrets scan results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: secrets-scan-results
@@ -235,7 +235,7 @@ jobs:
         licensecheck --zero || true
         
     - name: Upload license check results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: license-check-results
@@ -323,7 +323,7 @@ jobs:
         fi
         
     - name: Upload security config report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-config-report
@@ -402,7 +402,7 @@ jobs:
         cat security-summary.md
         
     - name: Upload security summary
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-summary
         path: security-summary.md

@@ -63,7 +63,7 @@ jobs:
       run: bandit -r services/ shared/ libs/
       
     - name: Upload code quality results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: code-quality-results
@@ -141,7 +141,7 @@ jobs:
         name: codecov-umbrella
         
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: unit-test-results
@@ -185,7 +185,7 @@ jobs:
         docker-compose logs > logs/docker-compose.log
         
     - name: Upload integration test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: integration-test-results
