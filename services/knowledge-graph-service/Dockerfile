@@ -31,7 +31,6 @@ RUN uv sync --frozen --no-dev
 
 # 复制共享库
 COPY shared/ ./shared/
-COPY libs/ ./libs/
 
 # 复制知识图谱服务代码
 COPY services/knowledge-graph-service/ ./services/knowledge-graph-service/

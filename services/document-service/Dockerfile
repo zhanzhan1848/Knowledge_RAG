@@ -37,7 +37,6 @@ RUN uv sync --frozen --no-dev --prerelease=allow
 
 # 复制共享库
 COPY shared/ ./shared/
-COPY libs/ ./libs/
 
 # 复制文档服务代码
 COPY services/document-service/ ./services/document-service/

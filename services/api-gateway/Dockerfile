@@ -30,7 +30,6 @@ RUN uv sync --frozen --no-dev --prerelease=allow
 
 # 复制共享库
 COPY shared/ ./shared/
-COPY libs/ ./libs/
 
 # 复制API网关服务代码
 COPY services/api-gateway/ ./services/api-gateway/

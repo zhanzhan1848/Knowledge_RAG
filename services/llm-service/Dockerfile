@@ -31,7 +31,6 @@ RUN uv sync --frozen --no-dev --prerelease=allow
 
 # 复制共享库
 COPY shared/ ./shared/
-COPY libs/ ./libs/
 
 # 复制LLM服务代码
 COPY services/llm-service/ ./services/llm-service/

@@ -31,7 +31,6 @@ RUN uv sync --frozen --no-dev --prerelease=allow
 
 # 复制共享库
 COPY shared/ ./shared/
-COPY libs/ ./libs/
 
 # 复制通知服务代码
 COPY services/notification-service/ ./services/notification-service/
