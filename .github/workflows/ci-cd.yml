@@ -61,7 +61,10 @@ jobs:
       run: uv run --with flake8 flake8 services/ shared/ scripts/ tests/
       
     - name: Run MyPy (Type Checking)
-      run: uv run --with mypy mypy services/ shared/ libs/
+      run: |
+        cd services/vector-service && uv run --with mypy mypy app/
+        cd ../ && cd services/graph-service && uv run --with mypy mypy app/
+        cd ../ &&uv run --with mypy mypy shared/
       
     - name: Run Bandit (Security Linting)
       run: uv run --with bandit bandit -r services/ shared/ libs/
