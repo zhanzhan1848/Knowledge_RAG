@@ -1,6 +1,7 @@
 # Knowledge RAG System - 共享工具单元测试
 # 测试共享库中的工具函数和类
 
+import asyncio
 import hashlib
 import json
 from datetime import datetime, timezone
