@@ -279,7 +279,7 @@ jobs:
       continue-on-error: true
       run: |
         cp .env.template .env
-        docker-compose -f docker-compose.yml up -d --build || true
+        docker compose -f docker-compose.yml up -d --build || true
         echo "Docker Compose services started"
         
     - name: Wait for services to be ready
@@ -291,14 +291,14 @@ jobs:
     - name: Run integration tests
       continue-on-error: true
       run: |
-        docker-compose exec -T api-gateway pytest tests/integration/ -v --junitxml=integration-test-results.xml --html=integration-test-report.html --self-contained-html || true
+        docker compose exec -T api-gateway pytest tests/integration/ -v --junitxml=integration-test-results.xml --html=integration-test-report.html --self-contained-html || true
         echo "Integration tests completed"
         
     - name: Collect service logs
       if: always()
       run: |
         mkdir -p logs
-        docker-compose logs > logs/docker-compose.log
+        docker compose logs > logs/docker-compose.log
         
     - name: Upload integration test results
       uses: actions/upload-artifact@v4
@@ -312,7 +312,7 @@ jobs:
           
     - name: Cleanup
       if: always()
-      run: docker-compose down -v
+      run: docker compose down -v
 
   # ===========================================
   # 安全扫描

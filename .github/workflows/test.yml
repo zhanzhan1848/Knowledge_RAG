@@ -225,7 +225,7 @@ jobs:
         
     - name: Start all services
       run: |
-        docker-compose -f docker-compose.yml up -d --build
+        docker compose -f docker-compose.yml up -d --build
         
     - name: Wait for services to be ready
       run: |
@@ -242,7 +242,7 @@ jobs:
           
           timeout 120 bash -c "until curl -f http://localhost:$port/health 2>/dev/null; do echo 'Waiting for $service_name...'; sleep 5; done" || {
             echo "$service_name failed to start"
-            docker-compose logs $service_name
+            docker compose logs $service_name
           }
         done
         
@@ -293,12 +293,12 @@ jobs:
       if: always()
       run: |
         mkdir -p logs
-        docker-compose logs --no-color > logs/all-services.log
+        docker compose logs --no-color > logs/all-services.log
         
         # 收集各个服务的单独日志
         services=("api-gateway" "auth-service" "document-service" "vector-service" "llm-service" "qa-service" "knowledge-graph-service" "notification-service" "graph-service")
         for service in "${services[@]}"; do
-          docker-compose logs --no-color $service > logs/$service.log 2>/dev/null || echo "No logs for $service"
+          docker compose logs --no-color $service > logs/$service.log 2>/dev/null || echo "No logs for $service"
         done
         
     - name: Upload E2E test results
@@ -312,7 +312,7 @@ jobs:
           
     - name: Cleanup
       if: always()
-      run: docker-compose down -v
+      run: docker compose down -v
 
   # ===========================================
   # 性能测试
