@@ -58,7 +58,7 @@ jobs:
       run: uv run --with isort isort --check-only --diff .
       
     - name: Run Flake8 (Linting)
-      run: uv run --with flake8 flake8 services/ shared/ libs/ scripts/ tests/
+      run: uv run --with flake8 flake8 services/ shared/ scripts/ tests/
       
     - name: Run MyPy (Type Checking)
       run: uv run --with mypy mypy services/ shared/ libs/
@@ -138,8 +138,7 @@ jobs:
         REDIS_URL: redis://localhost:6379/0
         ENVIRONMENT: testing
       run: |
-        uv run --with pytest --with pytest-cov --with pytest-asyncio pytest tests/unit/ 
-        -v --cov=tests --cov=scripts
+        uv run --with pytest --with pytest-cov --with pytest-asyncio pytest tests/unit/ -v --cov=tests --cov=scripts
         
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3

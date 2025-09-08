@@ -8,7 +8,6 @@ Knowledge RAG 系统环境变量验证脚本
 
 import asyncio
 import os
-import re
 import sys
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple

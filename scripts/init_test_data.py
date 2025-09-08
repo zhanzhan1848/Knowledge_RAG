@@ -19,8 +19,8 @@ import json
 import logging
 import os
 import sys
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from datetime import datetime
+from typing import Optional
 
 import asyncpg
 import redis.asyncio as redis

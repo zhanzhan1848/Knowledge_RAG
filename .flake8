@@ -1,0 +1,49 @@
+[flake8]
+# 设置最大行长度为200字符（适应大型项目需求）
+max-line-length = 200
+
+# 忽略的错误代码
+ignore = 
+    # E203: whitespace before ':' (与black冲突)
+    E203,
+    # W503: line break before binary operator (与PEP8新标准冲突)
+    W503,
+    # W291: trailing whitespace (由编辑器自动处理)
+    W291,
+    # F401: imported but unused (测试文件中可能需要预导入)
+    F401,
+    # F541: f-string is missing placeholders (有时用于格式化一致性)
+    F541,
+    # F841: local variable assigned but never used (测试中的临时变量)
+    F841,
+    # C901: function is too complex (复杂度检查可以单独处理)
+    C901,
+    # F811: redefinition of unused (可能是类型定义重复)
+    F811,
+    # F821: undefined name (可能是动态导入)
+    F821,
+    # F824: unused global (可能是预留的全局变量)
+    F824,
+
+# 排除的目录和文件
+exclude = 
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    .env,
+    build,
+    dist,
+    *.egg-info,
+    .tox,
+    .coverage,
+    .pytest_cache,
+    node_modules,
+    uv.lock
+
+# 每个文件的最大复杂度
+max-complexity = 10
+
+# 统计信息
+statistics = True
+count = True

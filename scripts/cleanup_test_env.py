@@ -385,7 +385,7 @@ class TestEnvironmentCleaner:
             for index in test_indices:
                 try:
                     await self.es_client.indices.refresh(index=index)
-                except:
+                except Exception:
                     pass
 
         except Exception as e:

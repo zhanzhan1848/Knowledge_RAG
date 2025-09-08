@@ -6,7 +6,6 @@ Knowledge RAG System - 测试运行脚本
 """
 
 import argparse
-import os
 import subprocess
 import sys
 from datetime import datetime
