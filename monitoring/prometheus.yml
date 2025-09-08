@@ -1,0 +1,124 @@
+# Prometheus配置文件
+# 用于监控Knowledge RAG系统的各个服务
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus自身监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # API网关服务监控
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # 认证服务监控
+  - job_name: 'auth-service'
+    static_configs:
+      - targets: ['auth-service:8001']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # 文档服务监控
+  - job_name: 'document-service'
+    static_configs:
+      - targets: ['document-service:8002']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # 向量服务监控
+  - job_name: 'vector-service'
+    static_configs:
+      - targets: ['vector-service:8003']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # 图服务监控
+  - job_name: 'graph-service'
+    static_configs:
+      - targets: ['graph-service:8004']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # LLM服务监控
+  - job_name: 'llm-service'
+    static_configs:
+      - targets: ['llm-service:8005']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # QA服务监控
+  - job_name: 'qa-service'
+    static_configs:
+      - targets: ['qa-service:8006']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # 知识图谱服务监控
+  - job_name: 'knowledge-graph-service'
+    static_configs:
+      - targets: ['knowledge-graph-service:8008']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # 通知服务监控
+  - job_name: 'notification-service'
+    static_configs:
+      - targets: ['notification-service:8007']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # PostgreSQL监控 (需要postgres_exporter)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    scrape_interval: 60s
+
+  # Redis监控 (需要redis_exporter)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 60s
+
+  # Elasticsearch监控
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets: ['elasticsearch:9200']
+    scrape_interval: 60s
+
+  # Neo4j监控
+  - job_name: 'neo4j'
+    static_configs:
+      - targets: ['neo4j:7474']
+    scrape_interval: 60s
+
+  # RabbitMQ监控
+  - job_name: 'rabbitmq'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+    scrape_interval: 60s
+
+# 告警规则配置
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# 远程写入配置 (可选)
+# remote_write:
+#   - url: "http://remote-storage:9201/write"
+
+# 远程读取配置 (可选)
+# remote_read:
+#   - url: "http://remote-storage:9201/read"
