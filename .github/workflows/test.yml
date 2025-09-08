@@ -81,7 +81,7 @@ jobs:
           
     - name: Install dependencies
       run: |
-        uv sync --dev
+        uv sync --dev --prerelease=allow
         
     - name: Run unit tests
       env:
@@ -173,7 +173,7 @@ jobs:
         
     - name: Install dependencies
       run: |
-        uv sync --dev
+        uv sync --dev --prerelease=allow
         
     - name: Run service-specific tests
       env:

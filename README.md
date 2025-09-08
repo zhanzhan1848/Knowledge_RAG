@@ -168,7 +168,7 @@ open http://localhost:9090  # Prometheus
 ### 本地开发环境
 ```bash
 # 使用 uv 创建虚拟环境和安装依赖 (推荐)
-uv sync --dev
+uv sync --dev --prerelease=allow
 
 # 或者使用传统方式
 # 创建虚拟环境

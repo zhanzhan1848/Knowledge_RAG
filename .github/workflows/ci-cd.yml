@@ -49,7 +49,7 @@ jobs:
           
     - name: Install dependencies
       run: |
-        uv sync --dev
+        uv sync --dev --prerelease=allow
         
     - name: Run Black (Code Formatting)
       run: black --check --diff .
@@ -130,7 +130,7 @@ jobs:
           
     - name: Install dependencies
       run: |
-        uv sync --dev
+        uv sync --dev --prerelease=allow
         
     - name: Run unit tests
       env:

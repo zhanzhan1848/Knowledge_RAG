@@ -27,7 +27,7 @@ ENV PATH="/root/.cargo/bin:$PATH"
 COPY pyproject.toml uv.lock ./
 
 # 安装Python依赖
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --prerelease=allow
 
 # 复制共享库
 COPY shared/ ./shared/
