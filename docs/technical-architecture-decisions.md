@@ -821,8 +821,9 @@ async def search_documents(query: str, user_id: str):
 # 多阶段构建Dockerfile
 FROM python:3.11-slim as builder
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
 
 FROM python:3.11-slim as runtime
 # 安全配置
@@ -921,8 +922,8 @@ jobs:
     
     - name: Install dependencies
       run: |
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        uv sync --prerelease=allow
     
     - name: Run tests
       run: |

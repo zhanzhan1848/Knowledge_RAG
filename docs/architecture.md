@@ -3546,7 +3546,7 @@ unit-test:
     POSTGRES_USER: test_user
     POSTGRES_PASSWORD: test_password
   before_script:
-    - pip install -r requirements-dev.txt
+    - uv sync --prerelease=allow
   script:
     - pytest tests/unit/ --cov=src --cov-report=xml
     - flake8 src/
@@ -3745,8 +3745,8 @@ jobs:
     
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements-dev.txt
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        uv sync --prerelease=allow
     
     - name: Run linting
       run: |

@@ -178,7 +178,7 @@ source venv/bin/activate  # Linux/Mac
 venv\Scripts\activate     # Windows
 
 # 安装开发依赖
-uv pip install -r requirements-dev.txt
+uv sync --prerelease=allow
 
 # 安装 pre-commit 钩子
 pre-commit install

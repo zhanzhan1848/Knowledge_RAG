@@ -978,12 +978,15 @@ RUN apt-get update && apt-get install -y \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# 复制并安装Python依赖
-COPY requirements.txt requirements-dev.txt ./
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt && \
-    if [ "$BUILD_ENV" = "development" ]; then \
-        pip install --no-cache-dir -r requirements-dev.txt; \
+# 复制uv二进制文件和依赖配置
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY pyproject.toml uv.lock ./
+
+# 安装Python依赖
+RUN if [ "$BUILD_ENV" = "development" ]; then \
+        uv sync --frozen; \
+    else \
+        uv sync --frozen --no-dev; \
     fi
 
 # 第二阶段：运行阶段
@@ -1765,8 +1768,8 @@ jobs:
     
     - name: 安装依赖
       run: |
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        uv sync --prerelease=allow
     
     - name: 运行测试
       run: |

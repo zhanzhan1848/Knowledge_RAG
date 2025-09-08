@@ -50,13 +50,13 @@ jobs:
         
     - name: Run Bandit security scan
       run: |
-        bandit -r services/ shared/ libs/ -f json -o bandit-report.json || true
-        bandit -r services/ shared/ libs/ -f txt -o bandit-report.txt || true
+        uv run bandit -r services/ shared/ libs/ -f json -o bandit-report.json || true
+        uv run bandit -r services/ shared/ libs/ -f txt -o bandit-report.txt || true
         
     - name: Run Safety check for dependencies
       run: |
-        safety check --json --output safety-report.json || true
-        safety check --output safety-report.txt || true
+        uv run safety check --json --output safety-report.json || true
+        uv run safety check --output safety-report.txt || true
         
     - name: Run Semgrep security scan
       run: |
@@ -194,7 +194,7 @@ jobs:
         
     - name: Install detect-secrets
       run: |
-        pip install detect-secrets
+        uv tool install detect-secrets
         
     - name: Run detect-secrets scan
       run: |
@@ -227,11 +227,12 @@ jobs:
         
     - name: Install license checking tools
       run: |
-        pip install pip-licenses licensecheck
+        uv tool install pip-licenses
+        uv tool install licensecheck
         
     - name: Check Python package licenses
       run: |
-        pip install -r requirements.txt
+        uv sync --prerelease=allow
         pip-licenses --format=json --output-file=python-licenses.json
         pip-licenses --format=plain --output-file=python-licenses.txt
         

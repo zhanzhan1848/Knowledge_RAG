@@ -119,7 +119,7 @@ install_dependencies() {
         uv sync --dev --prerelease=allow
         log_success "Python 依赖安装完成"
     elif [ -f "requirements.txt" ]; then
-        uv pip install -r requirements.txt
+        uv sync --prerelease=allow
         log_success "Python 依赖安装完成"
     else
         log_warning "pyproject.toml 或 requirements.txt 文件不存在，跳过依赖安装"

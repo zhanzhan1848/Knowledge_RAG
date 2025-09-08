@@ -198,7 +198,7 @@ class WeaviateConnectionManager:
                     raise ConnectionError("Weaviate 服务未就绪")
                     
             except ImportError:
-                raise ImportError("请安装 weaviate-client: pip install weaviate-client")
+                raise ImportError("请安装 weaviate-client: uv add weaviate-client")
             except Exception as e:
                 raise ConnectionError(f"连接 Weaviate 失败: {e}")
         

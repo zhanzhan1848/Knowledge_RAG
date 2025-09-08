@@ -185,14 +185,11 @@ pyenv install 3.11.7
 pyenv global 3.11.7
 
 # 依赖管理
-pip install poetry
-poetry install
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv sync --prerelease=allow
 
-# 代码质量工具
-pip install black isort flake8 mypy
-
-# 测试工具
-pip install pytest pytest-asyncio pytest-cov testcontainers
+# 代码质量工具已包含在项目依赖中
+# 测试工具已包含在项目依赖中
 ```
 
 #### Docker环境设置

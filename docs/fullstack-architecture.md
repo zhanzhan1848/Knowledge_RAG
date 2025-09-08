@@ -1818,7 +1818,9 @@ COPY requirements.txt .
 COPY ../shared ./shared
 
 # 安装Python依赖
-RUN pip install --no-cache-dir --user -r requirements.txt
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
 
 # 生产阶段
 FROM python:3.11-slim
@@ -2260,7 +2262,8 @@ code-quality:
   stage: test
   image: python:3.11-slim
   script:
-    - pip install black isort flake8 mypy pytest
+    - curl -LsSf https://astral.sh/uv/install.sh | sh
+    - uv sync --prerelease=allow
     - black --check .
     - isort --check-only .
     - flake8 .
@@ -2283,8 +2286,8 @@ unit-tests:
     DATABASE_URL: postgresql://test_user:test_pass@postgres:5432/test_db
     REDIS_URL: redis://redis:6379/0
   script:
-    - pip install poetry
-    - poetry install
+    - curl -LsSf https://astral.sh/uv/install.sh | sh
+    - uv sync --prerelease=allow
     - poetry run pytest --cov=src --cov-report=xml
   coverage: '/TOTAL.+ ([0-9]{1,3}%)$/'
   artifacts:
@@ -5298,9 +5301,8 @@ cd knowledge-rag
 
 # 后端环境设置
 cd backend
-python -m venv venv
-source venv/bin/activate  # macOS/Linux
-pip install -r requirements.txt
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv sync --prerelease=allow
 
 # 数据库初始化
 docker-compose up -d postgres redis
@@ -5591,9 +5593,9 @@ jobs:
     
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r backend/requirements.txt
-        pip install -r backend/requirements-dev.txt
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        cd backend
+        uv sync --prerelease=allow
     
     - name: Run linting
       run: |
@@ -7545,8 +7547,9 @@ jobs:
         
     - name: Install dependencies
       run: |
-        pip install -r requirements.txt
-        pip install openapi-generator-cli
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        uv sync --prerelease=allow
+        uv tool install openapi-generator-cli
         
     - name: Generate OpenAPI spec
       run: |

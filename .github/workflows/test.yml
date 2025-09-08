@@ -90,7 +90,7 @@ jobs:
         ENVIRONMENT: testing
         PYTHONPATH: ${{ github.workspace }}
       run: |
-        pytest tests/unit/ -v --tb=short \
+        uv run pytest tests/unit/ -v --tb=short \
                --cov=services --cov=shared --cov=libs \
                --cov-report=xml --cov-report=term-missing \
                --junitxml=pytest-results-${{ matrix.python-version }}.xml
@@ -183,7 +183,7 @@ jobs:
         PYTHONPATH: ${{ github.workspace }}
       run: |
         if [ -d "tests/services/${{ matrix.service }}" ]; then
-          pytest tests/services/${{ matrix.service }}/ -v --tb=short \
+          uv run pytest tests/services/${{ matrix.service }}/ -v --tb=short \
                  --cov=services/${{ matrix.service }} \
                  --cov-report=xml --cov-report=term-missing \
                  --junitxml=pytest-${{ matrix.service }}.xml
@@ -249,7 +249,7 @@ jobs:
     - name: Run end-to-end tests
       run: |
         if [ -d "tests/e2e" ]; then
-          pytest tests/e2e/ -v --tb=short --junitxml=pytest-e2e.xml
+          uv run pytest tests/e2e/ -v --tb=short --junitxml=pytest-e2e.xml
         else
           echo "No E2E tests found, creating basic connectivity tests"
           python -c "
@@ -331,14 +331,19 @@ jobs:
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         
-    - name: Install performance testing tools
+    - name: Install uv
+      uses: astral-sh/setup-uv@v3
+      with:
+        version: "latest"
+        
+    - name: Install dependencies
       run: |
-        pip install locust pytest-benchmark
+        uv sync --dev --prerelease=allow
         
     - name: Run performance tests
       run: |
         if [ -d "tests/performance" ]; then
-          pytest tests/performance/ -v --benchmark-only --benchmark-json=benchmark.json
+          uv run pytest tests/performance/ -v --benchmark-only --benchmark-json=benchmark.json
         else
           echo "No performance tests found"
         fi

@@ -20,12 +20,14 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# 安装uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
+
 # 复制依赖文件
-COPY requirements.txt requirements-dev.txt ./
+COPY pyproject.toml uv.lock ./
 
 # 安装Python依赖
-RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+RUN uv sync --frozen --no-dev --prerelease=allow
 
 # 复制共享库
 COPY shared/ ./shared/
