@@ -69,7 +69,6 @@ nltk>=3.8.0
 
 # GraphRAG
 graphrag>=0.1.0
-microsoft-graphrag>=0.1.0
 
 # Monitoring
 prometheus-client>=0.19.0
