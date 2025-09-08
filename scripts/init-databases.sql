@@ -30,7 +30,6 @@ CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 \c vector_db;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-CREATE EXTENSION IF NOT EXISTS "vector";
 
 \c knowledge_graph_db;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
