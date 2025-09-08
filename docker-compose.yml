@@ -122,7 +122,7 @@ services:
       PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
       DEFAULT_VECTORIZER_MODULE: 'text2vec-model2vec'
       ENABLE_MODULES: 'text2vec-model2vec'
-      MODEL2VEC_INFERENCE_API: 'http://text2vec-model2vec:8080'
+      MODEL2VEC_INFERENCE_API: 'http://text2vec-model2vec:8081'
       CLUSTER_HOSTNAME: 'node1'
     volumes:
       - weaviate_data:/var/lib/weaviate
