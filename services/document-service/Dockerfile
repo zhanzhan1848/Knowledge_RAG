@@ -23,14 +23,13 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y \
     tesseract-ocr-eng \
     libreoffice \
     pandoc \
-    && curl -LsSf https://astral.sh/uv/install.sh | sh \
     && rm -rf /var/lib/apt/lists/*
 
-# 添加uv到PATH
-ENV PATH="/root/.cargo/bin:$PATH"
+# 安装uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 # 复制项目配置文件
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 
 # 安装Python依赖
 RUN uv sync --frozen --no-dev --prerelease=allow

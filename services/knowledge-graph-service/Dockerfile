@@ -24,7 +24,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # 复制依赖文件
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 
 # 安装Python依赖
 RUN uv sync --frozen --no-dev
