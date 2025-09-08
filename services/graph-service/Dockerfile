@@ -13,7 +13,7 @@ ENV PYTHONPATH=/app \
     UV_CACHE_DIR=/tmp/uv-cache
 
 # 安装系统依赖和uv
-RUN apt-get update && apt-get install -y \
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y \
     build-essential \
     curl \
     git \

@@ -12,7 +12,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_CACHE_DIR=/tmp/uv-cache
 
 # 安装系统依赖和uv（文档处理需要额外的系统库）
-RUN apt-get update && apt-get install -y \
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y \
     gcc \
     g++ \
     libpq-dev \
