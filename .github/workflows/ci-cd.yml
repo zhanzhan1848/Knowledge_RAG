@@ -276,7 +276,6 @@ jobs:
       uses: docker/setup-buildx-action@v3
       
     - name: Start services with Docker Compose
-      continue-on-error: true
       run: |
         mkdir -p logs
         cp .env.template .env
@@ -285,7 +284,6 @@ jobs:
         echo "Docker Compose services started" | tee -a logs/docker-compose-startup.log
         
     - name: Wait for services to be ready
-      continue-on-error: true
       run: |
         echo "Waiting for services to be ready..." | tee -a logs/docker-compose-startup.log
         timeout 300 bash -c 'until curl -f http://localhost:8000/health; do echo "Waiting for API Gateway health check..." | tee -a logs/docker-compose-startup.log; sleep 5; done' 2>&1 | tee -a logs/docker-compose-startup.log
