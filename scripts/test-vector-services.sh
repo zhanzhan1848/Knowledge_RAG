@@ -78,6 +78,8 @@ test_text2vec() {
   echo -e "${YELLOW}容器日志:${NC}"
   docker logs knowledge-rag-text2vec-model2vec
   
+  # 使用8081端口是因为在docker-compose.core.yml中将容器的8080端口映射到了宿主机的8081端口
+  # 注意：虽然官方Weaviate文档没有明确说明model2vec有/health端点，但在docker-compose.core.yml中配置了此健康检查端点
   while ! curl -s -f http://localhost:8081/health > /dev/null; do
     if [ $counter -ge $timeout ]; then
       echo -e "${RED}等待text2vec-model2vec服务超时!${NC}"
