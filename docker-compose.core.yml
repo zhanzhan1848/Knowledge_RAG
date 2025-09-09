@@ -75,7 +75,7 @@ services:
 
   # 轻量级嵌入模型 (Weaviate依赖)
   text2vec-model2vec:
-    image: cr.weaviate.io/semitechnologies/transformers-inference:sentence-transformers-multi-qa-MiniLM-L6-cos-v1
+    image: cr.weaviate.io/semitechnologies/model2vec-inference:minishlab-potion-base-32M
     container_name: knowledge-rag-text2vec-model2vec
     ports:
       - "8081:8080"
