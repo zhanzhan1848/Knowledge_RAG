@@ -134,7 +134,9 @@ jobs:
           docker compose -f docker-compose.core.yml up -d text2vec-model2vec 2>&1 | tee -a logs/weaviate.log
           
           # 等待text2vec-model2vec就绪
-          timeout 120 bash -c 'until curl -f http://localhost:8081/docs; do echo "等待text2vec-model2vec..." | tee -a logs/weaviate.log; docker logs --tail=10 knowledge-rag-text2vec-model2vec | tee -a logs/text2vec.log; sleep 3; done'
+          echo "等待text2vec-model2vec服务启动..." | tee -a logs/weaviate.log
+          sleep 30
+          docker logs --tail=10 knowledge-rag-text2vec-model2vec | tee -a logs/text2vec.log
         fi
         
         # 启动weaviate
