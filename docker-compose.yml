@@ -110,72 +110,53 @@ services:
       retries: 5
 
   # Weaviate 向量数据库
-  # weaviate:
-  #   image: cr.weaviate.io/semitechnologies/weaviate:1.32.2
-  #   container_name: knowledge-rag-weaviate
-  #   command:
-  #     - --host
-  #     - 0.0.0.0
-  #     - --port
-  #     - '8080'
-  #     - --scheme
-  #     - http
-  #   ports:
-  #     - "8080:8080"
-  #     - "50051:50051"
-  #   environment:
-  #     QUERY_DEFAULTS_LIMIT: 25
-  #     AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
-  #     PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
-  #     DEFAULT_VECTORIZER_MODULE: 'text2vec-model2vec'
-  #     ENABLE_MODULES: text2vec-model2vec
-  #     MODEL2VEC_INFERENCE_API: 'http://text2vec-model2vec:8080'
-  #     CLUSTER_HOSTNAME: 'node1'
-  #   volumes:
-  #     - weaviate_data: /var/lib/weaviate
-  #   networks:
-  #     - knowledge-rag-network
-  #   restart: on-failure:0
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:8080/v1/.well-known/ready"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 5
-
-  # # 轻量级嵌入模型，在导入时从对象生成向量
-  # text2vec-model2vec:
-  #   image: cr.weaviate.io/semitechnologies/model2vec-inference:minishlab-potion-base-32M
-  #   container_name: knowledge-rag-text2vec-model2vec
-  #   ports:
-  #     - "8081:8080"
-  #   networks:
-  #     - knowledge-rag-network
-  #   environment:
-  #     ENABLE_CUDA: 0
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 5
-
   weaviate:
     image: cr.weaviate.io/semitechnologies/weaviate:1.32.2
     container_name: knowledge-rag-weaviate
-    networks:
-      - knowledge-rag-network
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - '8080'
+      - --scheme
+      - http
     ports:
       - "8080:8080"
       - "50051:50051"
     environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'text2vec-model2vec'
       ENABLE_MODULES: text2vec-model2vec
-      MODEL2VEC_INFERENCE_API: http://text2vec-model2vec:8080
+      MODEL2VEC_INFERENCE_API: 'http://text2vec-model2vec:8080'
+      CLUSTER_HOSTNAME: 'node1'
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    networks:
+      - knowledge-rag-network
+    restart: on-failure:0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 30s
+      timeout: 30s
+      retries: 5
 
-  # A lightweight embedding model that will generate vectors from objects during import
+  # 轻量级嵌入模型，在导入时从对象生成向量
   text2vec-model2vec:
     image: cr.weaviate.io/semitechnologies/model2vec-inference:minishlab-potion-base-32M
     container_name: knowledge-rag-text2vec-model2vec
+    ports:
+      - "8081:8080"
     networks:
       - knowledge-rag-network
+    environment:
+      ENABLE_CUDA: 0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   # ===========================================
   # 微服务应用
