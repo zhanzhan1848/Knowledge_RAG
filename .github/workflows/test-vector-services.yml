@@ -134,17 +134,24 @@ jobs:
           docker compose -f docker-compose.core.yml up -d text2vec-model2vec 2>&1 | tee -a logs/weaviate.log
           
           # 等待text2vec-model2vec就绪
-          timeout 120 bash -c 'until curl -f http://localhost:8081/docs; do echo "等待text2vec-model2vec..." | tee -a logs/weaviate.log; sleep 3; done'
+          timeout 120 bash -c 'until curl -f http://localhost:8081/docs; do echo "等待text2vec-model2vec..." | tee -a logs/weaviate.log; docker logs --tail=10 knowledge-rag-text2vec-model2vec | tee -a logs/text2vec.log; sleep 3; done'
         fi
         
         # 启动weaviate
         echo "启动weaviate服务..." | tee -a logs/weaviate.log
         docker compose -f docker-compose.core.yml up -d weaviate 2>&1 | tee -a logs/weaviate.log
         
+        # 输出运行时日志
+        echo "输出text2vec-model2vec运行时日志:" | tee -a logs/text2vec.log
+        docker logs knowledge-rag-text2vec-model2vec | tee -a logs/text2vec.log
+        
+        echo "输出weaviate运行时日志:" | tee -a logs/weaviate.log
+        docker logs knowledge-rag-weaviate | tee -a logs/weaviate.log
+        
     - name: Wait for weaviate readiness
       run: |
         echo "等待weaviate服务就绪..." | tee -a logs/weaviate.log
-        timeout 180 bash -c 'until curl -f http://localhost:8080/v1/.well-known/ready; do echo "等待Weaviate..." | tee -a logs/weaviate.log; sleep 5; done'
+        timeout 180 bash -c 'until curl -f http://localhost:8080/v1/.well-known/ready; do echo "等待Weaviate..." | tee -a logs/weaviate.log; docker logs --tail=10 knowledge-rag-weaviate | tee -a logs/weaviate.log; sleep 5; done'
         echo "weaviate服务就绪" | tee -a logs/weaviate.log
         
     - name: Test weaviate functionality
@@ -197,7 +204,9 @@ jobs:
       if: always()
       with:
         name: weaviate-logs
-        path: logs/weaviate.log
+        path: |
+          logs/weaviate.log
+          logs/text2vec.log
         retention-days: 7
         
     - name: Cleanup services
