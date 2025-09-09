@@ -43,10 +43,14 @@ COPY services/document-service/ ./services/document-service/
 # 创建上传目录
 RUN mkdir -p /app/data/uploads /app/data/temp /app/data/processed
 
-# 创建非root用户
-RUN addgroup --system appuser && adduser --system --group appuser
-RUN chown -R appuser:appuser /app
+# 创建非root用户和设置HOME目录
+RUN addgroup --system appuser && adduser --system --group appuser --home /home/appuser
+RUN mkdir -p /home/appuser/.cache/uv && chown -R appuser:appuser /app /home/appuser
 USER appuser
+
+# 设置用户环境变量
+ENV HOME=/home/appuser \
+    UV_CACHE_DIR=/home/appuser/.cache/uv
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \

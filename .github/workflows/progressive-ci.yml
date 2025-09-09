@@ -1,0 +1,369 @@
+# Progressive CI/CD Workflow for Knowledge RAG System
+# 渐进式CI/CD工作流，分阶段测试核心RAG功能
+
+name: Progressive RAG Core Testing
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      test_level:
+        description: 'Test Level (basic/core/full)'
+        required: true
+        default: 'core'
+        type: choice
+        options:
+        - basic
+        - core
+        - full
+
+env:
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+jobs:
+  # ===========================================
+  # 阶段1: 基础设施服务测试
+  # ===========================================
+  test-infrastructure:
+    name: "阶段1: 基础设施服务"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    outputs:
+      infrastructure-status: ${{ steps.infra-test.outputs.status }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Create logs directory
+      run: mkdir -p logs
+      
+    - name: Prepare environment
+      run: |
+        cp .env.template .env
+        echo "OPENAI_API_KEY=test_key" >> .env
+        echo "HUGGINGFACE_API_KEY=test_key" >> .env
+        
+    - name: Start infrastructure services
+      id: start-infra
+      run: |
+        echo "启动基础设施服务..." | tee logs/infrastructure.log
+        docker compose -f docker-compose.core.yml up -d postgres redis 2>&1 | tee -a logs/infrastructure.log
+        
+    - name: Wait for infrastructure readiness
+      run: |
+        echo "等待基础设施服务就绪..." | tee -a logs/infrastructure.log
+        
+        # 等待PostgreSQL
+        timeout 120 bash -c 'until docker compose -f docker-compose.core.yml exec -T postgres pg_isready -U postgres; do echo "等待PostgreSQL..." | tee -a logs/infrastructure.log; sleep 3; done'
+        
+        # 等待Redis
+        timeout 60 bash -c 'until docker compose -f docker-compose.core.yml exec -T redis redis-cli ping; do echo "等待Redis..." | tee -a logs/infrastructure.log; sleep 2; done'
+        
+        echo "基础设施服务就绪" | tee -a logs/infrastructure.log
+        
+    - name: Test infrastructure connectivity
+      id: infra-test
+      run: |
+        echo "测试基础设施连接..." | tee -a logs/infrastructure.log
+        
+        # 测试PostgreSQL连接
+        docker compose -f docker-compose.core.yml exec -T postgres psql -U postgres -d knowledge_rag -c "SELECT version();" | tee -a logs/infrastructure.log
+        
+        # 测试Redis连接
+        docker compose -f docker-compose.core.yml exec -T redis redis-cli set test_key "infrastructure_ok" | tee -a logs/infrastructure.log
+        docker compose -f docker-compose.core.yml exec -T redis redis-cli get test_key | tee -a logs/infrastructure.log
+        
+        echo "status=success" >> $GITHUB_OUTPUT
+        echo "基础设施测试通过" | tee -a logs/infrastructure.log
+        
+    - name: Upload infrastructure logs
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: infrastructure-logs
+        path: logs/infrastructure.log
+        retention-days: 7
+        
+    - name: Cleanup infrastructure
+      if: always()
+      run: docker compose -f docker-compose.core.yml down -v
+
+  # ===========================================
+  # 阶段2: 核心RAG服务测试
+  # ===========================================
+  test-core-rag:
+    name: "阶段2: 核心RAG服务"
+    runs-on: ubuntu-latest
+    needs: test-infrastructure
+    if: needs.test-infrastructure.outputs.infrastructure-status == 'success'
+    timeout-minutes: 25
+    
+    outputs:
+      core-rag-status: ${{ steps.core-test.outputs.status }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Create logs directory
+      run: mkdir -p logs
+      
+    - name: Prepare environment
+      run: |
+        cp .env.template .env
+        echo "OPENAI_API_KEY=test_key" >> .env
+        echo "HUGGINGFACE_API_KEY=test_key" >> .env
+        
+    - name: Start core RAG infrastructure
+      run: |
+        echo "启动核心RAG基础设施..." | tee logs/core-rag.log
+        docker compose -f docker-compose.core.yml up -d postgres redis neo4j text2vec-model2vec weaviate 2>&1 | tee -a logs/core-rag.log
+        
+    - name: Wait for core infrastructure
+      run: |
+        echo "等待核心基础设施就绪..." | tee -a logs/core-rag.log
+        
+        # 等待PostgreSQL和Redis
+        timeout 120 bash -c 'until docker compose -f docker-compose.core.yml exec -T postgres pg_isready -U postgres; do echo "等待PostgreSQL..." | tee -a logs/core-rag.log; sleep 3; done'
+        timeout 60 bash -c 'until docker compose -f docker-compose.core.yml exec -T redis redis-cli ping; do echo "等待Redis..." | tee -a logs/core-rag.log; sleep 2; done'
+        
+        # 等待Neo4j
+        timeout 180 bash -c 'until docker compose -f docker-compose.core.yml exec -T neo4j cypher-shell -u neo4j -p neo4j123 "RETURN 1"; do echo "等待Neo4j..." | tee -a logs/core-rag.log; sleep 5; done'
+        
+        # 等待text2vec-model2vec
+        timeout 120 bash -c 'until curl -f http://localhost:8081/health; do echo "等待text2vec-model2vec..." | tee -a logs/core-rag.log; sleep 3; done'
+        
+        # 等待Weaviate
+        timeout 180 bash -c 'until curl -f http://localhost:8080/v1/.well-known/ready; do echo "等待Weaviate..." | tee -a logs/core-rag.log; sleep 5; done'
+        
+        echo "核心基础设施就绪" | tee -a logs/core-rag.log
+        
+    - name: Start core RAG services
+      run: |
+        echo "启动核心RAG服务..." | tee -a logs/core-rag.log
+        docker compose -f docker-compose.core.yml up -d --build api-gateway auth-service vector-service knowledge-graph-service 2>&1 | tee -a logs/core-rag.log
+        
+    - name: Wait for core services
+      run: |
+        echo "等待核心服务就绪..." | tee -a logs/core-rag.log
+        
+        # 等待API Gateway
+        timeout 120 bash -c 'until curl -f http://localhost:8000/health; do echo "等待API Gateway..." | tee -a logs/core-rag.log; sleep 3; done'
+        
+        # 等待Auth Service
+        timeout 120 bash -c 'until curl -f http://localhost:8001/health; do echo "等待Auth Service..." | tee -a logs/core-rag.log; sleep 3; done'
+        
+        # 等待Vector Service
+        timeout 120 bash -c 'until curl -f http://localhost:8003/health; do echo "等待Vector Service..." | tee -a logs/core-rag.log; sleep 3; done'
+        
+        # 等待Knowledge Graph Service
+        timeout 120 bash -c 'until curl -f http://localhost:8006/health; do echo "等待Knowledge Graph Service..." | tee -a logs/core-rag.log; sleep 3; done'
+        
+        echo "核心服务就绪" | tee -a logs/core-rag.log
+        
+    - name: Test core RAG functionality
+      id: core-test
+      run: |
+        echo "测试核心RAG功能..." | tee -a logs/core-rag.log
+        
+        # 测试Weaviate连接
+        echo "测试Weaviate连接..." | tee -a logs/core-rag.log
+        curl -X GET "http://localhost:8080/v1/meta" | jq . | tee -a logs/core-rag.log
+        
+        # 测试Neo4j连接
+        echo "测试Neo4j连接..." | tee -a logs/core-rag.log
+        docker compose -f docker-compose.core.yml exec -T neo4j cypher-shell -u neo4j -p neo4j123 "CREATE (n:TestNode {name: 'CI_Test'}) RETURN n" | tee -a logs/core-rag.log
+        
+        # 测试Vector Service API
+        echo "测试Vector Service API..." | tee -a logs/core-rag.log
+        curl -X GET "http://localhost:8003/health" | tee -a logs/core-rag.log
+        
+        # 测试Knowledge Graph Service API
+        echo "测试Knowledge Graph Service API..." | tee -a logs/core-rag.log
+        curl -X GET "http://localhost:8006/health" | tee -a logs/core-rag.log
+        
+        echo "status=success" >> $GITHUB_OUTPUT
+        echo "核心RAG功能测试通过" | tee -a logs/core-rag.log
+        
+    - name: Upload core RAG logs
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: core-rag-logs
+        path: logs/core-rag.log
+        retention-days: 7
+        
+    - name: Cleanup core services
+      if: always()
+      run: docker compose -f docker-compose.core.yml down -v
+
+  # ===========================================
+  # 阶段3: 完整RAG工作流测试
+  # ===========================================
+  test-full-rag-workflow:
+    name: "阶段3: 完整RAG工作流"
+    runs-on: ubuntu-latest
+    needs: test-core-rag
+    if: needs.test-core-rag.outputs.core-rag-status == 'success' && (github.event.inputs.test_level == 'full' || github.event_name != 'workflow_dispatch')
+    timeout-minutes: 35
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Create logs directory
+      run: mkdir -p logs
+      
+    - name: Prepare environment
+      run: |
+        cp .env.template .env
+        echo "OPENAI_API_KEY=test_key" >> .env
+        echo "HUGGINGFACE_API_KEY=test_key" >> .env
+        
+    - name: Start full RAG system
+      run: |
+        echo "启动完整RAG系统..." | tee logs/full-rag.log
+        docker compose -f docker-compose.core.yml up -d --build 2>&1 | tee -a logs/full-rag.log
+        
+    - name: Wait for all services
+      run: |
+        echo "等待所有服务就绪..." | tee -a logs/full-rag.log
+        
+        # 等待核心基础设施
+        timeout 180 bash -c 'until docker compose -f docker-compose.core.yml exec -T postgres pg_isready -U postgres; do echo "等待PostgreSQL..." | tee -a logs/full-rag.log; sleep 3; done'
+        timeout 60 bash -c 'until docker compose -f docker-compose.core.yml exec -T redis redis-cli ping; do echo "等待Redis..." | tee -a logs/full-rag.log; sleep 2; done'
+        timeout 240 bash -c 'until docker compose -f docker-compose.core.yml exec -T neo4j cypher-shell -u neo4j -p neo4j123 "RETURN 1"; do echo "等待Neo4j..." | tee -a logs/full-rag.log; sleep 5; done'
+        timeout 180 bash -c 'until curl -f http://localhost:8080/v1/.well-known/ready; do echo "等待Weaviate..." | tee -a logs/full-rag.log; sleep 5; done'
+        
+        # 等待所有微服务
+        timeout 180 bash -c 'until curl -f http://localhost:8000/health; do echo "等待API Gateway..." | tee -a logs/full-rag.log; sleep 3; done'
+        timeout 120 bash -c 'until curl -f http://localhost:8001/health; do echo "等待Auth Service..." | tee -a logs/full-rag.log; sleep 3; done'
+        timeout 120 bash -c 'until curl -f http://localhost:8003/health; do echo "等待Vector Service..." | tee -a logs/full-rag.log; sleep 3; done'
+        timeout 120 bash -c 'until curl -f http://localhost:8004/health; do echo "等待LLM Service..." | tee -a logs/full-rag.log; sleep 3; done'
+        timeout 120 bash -c 'until curl -f http://localhost:8005/health; do echo "等待QA Service..." | tee -a logs/full-rag.log; sleep 3; done'
+        timeout 120 bash -c 'until curl -f http://localhost:8006/health; do echo "等待Knowledge Graph Service..." | tee -a logs/full-rag.log; sleep 3; done'
+        timeout 120 bash -c 'until curl -f http://localhost:8008/health; do echo "等待Graph Service..." | tee -a logs/full-rag.log; sleep 3; done'
+        
+        echo "所有服务就绪" | tee -a logs/full-rag.log
+        
+    - name: Run RAG integration tests
+      run: |
+        echo "运行RAG集成测试..." | tee -a logs/full-rag.log
+        
+        # 测试文档向量化流程
+        echo "测试文档向量化..." | tee -a logs/full-rag.log
+        curl -X POST "http://localhost:8003/api/v1/vectorize" \
+          -H "Content-Type: application/json" \
+          -d '{"text": "这是一个测试文档，用于验证RAG系统的向量化功能。", "metadata": {"source": "ci_test"}}' | tee -a logs/full-rag.log
+        
+        # 测试知识图谱构建
+        echo "测试知识图谱构建..." | tee -a logs/full-rag.log
+        curl -X POST "http://localhost:8006/api/v1/entities" \
+          -H "Content-Type: application/json" \
+          -d '{"text": "测试实体：人工智能是一种技术。", "extract_relations": true}' | tee -a logs/full-rag.log
+        
+        # 测试GraphRAG查询
+        echo "测试GraphRAG查询..." | tee -a logs/full-rag.log
+        curl -X POST "http://localhost:8008/api/v1/query" \
+          -H "Content-Type: application/json" \
+          -d '{"query": "什么是人工智能？", "use_graph": true}' | tee -a logs/full-rag.log
+        
+        # 测试QA服务
+        echo "测试QA服务..." | tee -a logs/full-rag.log
+        curl -X POST "http://localhost:8005/api/v1/ask" \
+          -H "Content-Type: application/json" \
+          -d '{"question": "请介绍一下RAG技术", "context_type": "graph"}' | tee -a logs/full-rag.log
+        
+        echo "RAG集成测试完成" | tee -a logs/full-rag.log
+        
+    - name: Collect service logs
+      if: always()
+      run: |
+        echo "收集服务日志..." | tee -a logs/full-rag.log
+        docker compose -f docker-compose.core.yml logs > logs/services.log 2>&1
+        
+    - name: Upload full RAG logs
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: full-rag-logs
+        path: |
+          logs/full-rag.log
+          logs/services.log
+        retention-days: 14
+        
+    - name: Cleanup full system
+      if: always()
+      run: docker compose -f docker-compose.core.yml down -v
+
+  # ===========================================
+  # 测试结果汇总
+  # ===========================================
+  test-summary:
+    name: "测试结果汇总"
+    runs-on: ubuntu-latest
+    needs: [test-infrastructure, test-core-rag, test-full-rag-workflow]
+    if: always()
+    
+    steps:
+    - name: Generate test summary
+      run: |
+        echo "# Knowledge RAG 渐进式测试结果" > test-summary.md
+        echo "" >> test-summary.md
+        echo "## 测试阶段结果" >> test-summary.md
+        echo "" >> test-summary.md
+        
+        if [ "${{ needs.test-infrastructure.result }}" == "success" ]; then
+          echo "✅ 阶段1: 基础设施服务 - 通过" >> test-summary.md
+        else
+          echo "❌ 阶段1: 基础设施服务 - 失败" >> test-summary.md
+        fi
+        
+        if [ "${{ needs.test-core-rag.result }}" == "success" ]; then
+          echo "✅ 阶段2: 核心RAG服务 - 通过" >> test-summary.md
+        elif [ "${{ needs.test-core-rag.result }}" == "skipped" ]; then
+          echo "⏭️ 阶段2: 核心RAG服务 - 跳过" >> test-summary.md
+        else
+          echo "❌ 阶段2: 核心RAG服务 - 失败" >> test-summary.md
+        fi
+        
+        if [ "${{ needs.test-full-rag-workflow.result }}" == "success" ]; then
+          echo "✅ 阶段3: 完整RAG工作流 - 通过" >> test-summary.md
+        elif [ "${{ needs.test-full-rag-workflow.result }}" == "skipped" ]; then
+          echo "⏭️ 阶段3: 完整RAG工作流 - 跳过" >> test-summary.md
+        else
+          echo "❌ 阶段3: 完整RAG工作流 - 失败" >> test-summary.md
+        fi
+        
+        echo "" >> test-summary.md
+        echo "## 核心组件状态" >> test-summary.md
+        echo "" >> test-summary.md
+        echo "- PostgreSQL + Redis: 基础数据存储" >> test-summary.md
+        echo "- Neo4j: 知识图谱存储" >> test-summary.md
+        echo "- Weaviate: 向量数据库" >> test-summary.md
+        echo "- GraphRAG: 图增强检索" >> test-summary.md
+        echo "- 微服务: API网关、认证、向量化、问答" >> test-summary.md
+        
+        cat test-summary.md
+        
+    - name: Upload test summary
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-summary
+        path: test-summary.md
+        retention-days: 30

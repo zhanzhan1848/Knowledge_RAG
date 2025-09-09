@@ -118,22 +118,58 @@ cp .env.template .env
 vim .env
 ```
 
-### 3. 启动服务
+### 3. 渐进式部署和测试
+
+我们提供了多种部署模式，建议按以下顺序进行：
+
+#### 方式一：使用测试脚本（推荐）
+```bash
+# 运行完整的渐进式测试
+./scripts/test-core-rag.sh
+
+# 或者分阶段测试
+./scripts/test-core-rag.sh --stage infrastructure  # 仅测试基础设施
+./scripts/test-core-rag.sh --stage core          # 测试核心RAG组件
+./scripts/test-core-rag.sh --stage services      # 测试微服务
+./scripts/test-core-rag.sh --stage integration   # 测试完整集成
+
+# 测试后保持服务运行（用于开发）
+./scripts/test-core-rag.sh --no-cleanup
+```
+
+#### 方式二：手动分阶段部署
+```bash
+# 阶段1: 启动基础设施服务
+docker compose -f docker-compose.core.yml up -d postgres redis
+
+# 阶段2: 启动核心RAG组件
+docker compose -f docker-compose.core.yml up -d neo4j text2vec-model2vec weaviate
+
+# 阶段3: 启动微服务
+docker compose -f docker-compose.core.yml up -d --build
+```
+
+#### 方式三：完整部署（适合生产环境）
 ```bash
 # 启动所有服务
-docker-compose up -d
+docker compose -f docker-compose.yml up -d
 
 # 查看服务状态
-docker-compose ps
+docker compose ps
 
 # 查看日志
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ### 4. 验证部署
 ```bash
 # 检查 API 网关健康状态
 curl http://localhost:8000/health
+
+# 测试核心RAG功能
+curl -X POST "http://localhost:8003/api/v1/vectorize" \
+  -H "Content-Type: application/json" \
+  -d '{"text": "测试文档内容", "metadata": {"source": "test"}}'
 
 # 访问 API 文档
 open http://localhost:8000/docs
@@ -162,6 +198,58 @@ open http://localhost:9090  # Prometheus
 | RabbitMQ | 5672/15672 | 消息队列 |
 | Prometheus | 9090 | 监控指标 |
 | Grafana | 3000 | 监控面板 |
+
+## 🧪 测试和CI/CD
+
+### 渐进式测试策略
+
+本项目采用渐进式测试策略，确保核心RAG功能的稳定性：
+
+#### GitHub Actions CI/CD
+我们提供了自动化的渐进式测试工作流 (`.github/workflows/progressive-ci.yml`)：
+
+- **阶段1: 基础设施测试** - 验证PostgreSQL和Redis基础服务
+- **阶段2: 核心RAG服务测试** - 验证Neo4j、Weaviate、text2vec等核心组件
+- **阶段3: 完整RAG工作流测试** - 验证端到端的RAG功能
+
+```bash
+# 手动触发CI/CD测试（在GitHub Actions中）
+# 可选择测试级别：basic, core, full
+```
+
+#### 本地测试脚本
+```bash
+# 完整测试流程
+./scripts/test-core-rag.sh
+
+# 分阶段测试
+./scripts/test-core-rag.sh --stage infrastructure
+./scripts/test-core-rag.sh --stage core
+./scripts/test-core-rag.sh --stage services
+./scripts/test-core-rag.sh --stage integration
+
+# 查看帮助
+./scripts/test-core-rag.sh --help
+```
+
+#### 测试覆盖范围
+- ✅ **基础设施连通性**: PostgreSQL、Redis连接测试
+- ✅ **核心RAG组件**: Neo4j图数据库、Weaviate向量数据库、text2vec模型服务
+- ✅ **微服务健康检查**: 所有API服务的健康状态验证
+- ✅ **RAG工作流集成**: 文档向量化、知识图谱构建、GraphRAG查询
+- ✅ **API功能测试**: 核心API端点的功能验证
+
+### 部署模式
+
+项目支持多种部署配置：
+
+| 配置文件 | 用途 | 包含服务 | 资源需求 |
+|---------|------|----------|----------|
+| `docker-compose.yml` | 完整开发环境 | 所有服务 + Elasticsearch | 高 (8GB+ RAM) |
+| `docker-compose.core.yml` | 核心RAG服务 | PostgreSQL + Redis + Neo4j + Weaviate + 核心微服务 | 中等 (4GB+ RAM) |
+| `docker-compose.ci.yml` | CI/CD轻量环境 | 基础服务 + 模拟组件 | 低 (2GB+ RAM) |
+
+详细说明请参考 [部署模式文档](docs/deployment-modes.md)。
 
 ## 🔧 开发指南
 

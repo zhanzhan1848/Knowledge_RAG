@@ -1,0 +1,191 @@
+# Knowledge RAG System - CI/CD Docker Compose Configuration
+# 用于CI/CD环境的轻量化服务编排，排除资源密集型服务
+
+version: '3.8'
+
+services:
+  # ===========================================
+  # 基础设施服务 (轻量化)
+  # ===========================================
+  
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: knowledge-rag-postgres
+    environment:
+      POSTGRES_DB: knowledge_rag
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_MULTIPLE_DATABASES: auth_db,document_db,vector_db,knowledge_graph_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+    networks:
+      - knowledge-rag-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 缓存和消息队列
+  redis:
+    image: redis:7-alpine
+    container_name: knowledge-rag-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - knowledge-rag-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================
+  # 微服务应用 (核心服务)
+  # ===========================================
+
+  # API 网关
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: knowledge-rag-api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/knowledge_rag
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 认证服务
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    container_name: knowledge-rag-auth-service
+    ports:
+      - "8001:8001"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/auth_db
+      - REDIS_URL=redis://redis:6379/1
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 向量服务 (使用内存向量存储)
+  vector-service:
+    build:
+      context: .
+      dockerfile: services/vector-service/Dockerfile
+    container_name: knowledge-rag-vector-service
+    ports:
+      - "8003:8003"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/vector_db
+      - REDIS_URL=redis://redis:6379/3
+      - VECTOR_STORE_TYPE=memory  # 使用内存存储而非Weaviate
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-test_key}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY:-test_key}
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ./data/vector_db:/app/data/vector_db
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # LLM 服务 (模拟模式)
+  llm-service:
+    build:
+      context: .
+      dockerfile: services/llm-service/Dockerfile
+    container_name: knowledge-rag-llm-service
+    ports:
+      - "8004:8004"
+    environment:
+      - ENVIRONMENT=testing
+      - REDIS_URL=redis://redis:6379/4
+      - LLM_MODE=mock  # 使用模拟LLM响应
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-test_key}
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # QA 服务
+  qa-service:
+    build:
+      context: .
+      dockerfile: services/qa-service/Dockerfile
+    container_name: knowledge-rag-qa-service
+    ports:
+      - "8005:8005"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/knowledge_rag
+      - REDIS_URL=redis://redis:6379/5
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+# ===========================================
+# 网络配置
+# ===========================================
+networks:
+  knowledge-rag-network:
+    driver: bridge
+    name: knowledge-rag-network
+
+# ===========================================
+# 数据卷配置
+# ===========================================
+volumes:
+  postgres_data:
+    name: knowledge-rag-postgres-data
+  redis_data:
+    name: knowledge-rag-redis-data

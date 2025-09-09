@@ -1,0 +1,359 @@
+# Knowledge RAG System - Core Services Configuration
+# 用于CI/CD环境的核心RAG服务编排
+# 重点测试 GraphRAG + Weaviate + Neo4j 核心功能
+
+version: '3.8'
+
+services:
+  # ===========================================
+  # 基础设施服务 (核心RAG必需)
+  # ===========================================
+  
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: knowledge-rag-postgres
+    environment:
+      POSTGRES_DB: knowledge_rag
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      POSTGRES_MULTIPLE_DATABASES: auth_db,document_db,vector_db,knowledge_graph_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql
+    networks:
+      - knowledge-rag-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 缓存和消息队列
+  redis:
+    image: redis:7-alpine
+    container_name: knowledge-rag-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - knowledge-rag-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Neo4j 图数据库 (GraphRAG核心)
+  neo4j:
+    image: neo4j:5.14-community
+    container_name: knowledge-rag-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/neo4j123
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+      # 优化CI环境内存使用
+      NEO4J_dbms_memory_heap_initial__size: 256m
+      NEO4J_dbms_memory_heap_max__size: 512m
+      NEO4J_dbms_memory_pagecache_size: 256m
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    networks:
+      - knowledge-rag-network
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p neo4j123 'RETURN 1'"]
+      interval: 30s
+      timeout: 15s
+      retries: 8
+
+  # 轻量级嵌入模型 (Weaviate依赖)
+  text2vec-model2vec:
+    image: cr.weaviate.io/semitechnologies/model2vec-inference:minishlab-potion-base-32M
+    container_name: knowledge-rag-text2vec-model2vec
+    ports:
+      - "8081:8080"
+    networks:
+      - knowledge-rag-network
+    environment:
+      ENABLE_CUDA: 0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Weaviate 向量数据库 (RAG核心)
+  weaviate:
+    image: cr.weaviate.io/semitechnologies/weaviate:1.32.2
+    container_name: knowledge-rag-weaviate
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - '8080'
+      - --scheme
+      - http
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'text2vec-model2vec'
+      ENABLE_MODULES: text2vec-model2vec
+      MODEL2VEC_INFERENCE_API: 'http://text2vec-model2vec:8080'
+      CLUSTER_HOSTNAME: 'node1'
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      text2vec-model2vec:
+        condition: service_healthy
+    restart: on-failure:0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 30s
+      timeout: 30s
+      retries: 8
+
+  # ===========================================
+  # 核心RAG微服务
+  # ===========================================
+
+  # API 网关 (入口服务)
+  api-gateway:
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: knowledge-rag-api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/knowledge_rag
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 认证服务
+  auth-service:
+    build:
+      context: .
+      dockerfile: services/auth-service/Dockerfile
+    container_name: knowledge-rag-auth-service
+    ports:
+      - "8001:8001"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/auth_db
+      - REDIS_URL=redis://redis:6379/1
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 向量服务 (RAG核心)
+  vector-service:
+    build:
+      context: .
+      dockerfile: services/vector-service/Dockerfile
+    container_name: knowledge-rag-vector-service
+    ports:
+      - "8003:8003"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/vector_db
+      - REDIS_URL=redis://redis:6379/3
+      - WEAVIATE_URL=http://weaviate:8080
+      - WEAVIATE_API_KEY=
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-test_key}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY:-test_key}
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ./data/vector_db:/app/data/vector_db
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      weaviate:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 知识图谱服务 (GraphRAG核心)
+  knowledge-graph-service:
+    build:
+      context: .
+      dockerfile: services/knowledge-graph-service/Dockerfile
+    container_name: knowledge-rag-knowledge-graph-service
+    ports:
+      - "8006:8006"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/knowledge_graph_db
+      - REDIS_URL=redis://redis:6379/6
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=neo4j123
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # GraphRAG 服务 (核心RAG引擎)
+  graph-service:
+    build:
+      context: .
+      dockerfile: services/graph-service/Dockerfile
+    container_name: knowledge-rag-graph-service
+    ports:
+      - "8008:8008"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/knowledge_graph_db
+      - REDIS_URL=redis://redis:6379/8
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=neo4j123
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-test_key}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-test_key}
+      - GRAPHRAG_STORAGE_TYPE=local
+      - GRAPHRAG_STORAGE_BASE_DIR=/app/data/graphrag
+      # GraphRAG测试模式配置
+      - GRAPHRAG_TEST_MODE=true
+      - GRAPHRAG_CHUNK_SIZE=512
+      - GRAPHRAG_OVERLAP_SIZE=64
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ./data/graphrag:/app/data/graphrag
+      - ./data:/app/data
+      - ./temp:/app/temp
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      weaviate:
+        condition: service_healthy
+      vector-service:
+        condition: service_started
+      knowledge-graph-service:
+        condition: service_started
+    restart: unless-stopped
+
+  # LLM 服务 (RAG推理)
+  llm-service:
+    build:
+      context: .
+      dockerfile: services/llm-service/Dockerfile
+    container_name: knowledge-rag-llm-service
+    ports:
+      - "8004:8004"
+    environment:
+      - ENVIRONMENT=testing
+      - REDIS_URL=redis://redis:6379/4
+      - LLM_MODE=mock  # 测试模式使用模拟响应
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-test_key}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-test_key}
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # QA 服务 (RAG问答)
+  qa-service:
+    build:
+      context: .
+      dockerfile: services/qa-service/Dockerfile
+    container_name: knowledge-rag-qa-service
+    ports:
+      - "8005:8005"
+    environment:
+      - ENVIRONMENT=testing
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres123@postgres:5432/knowledge_rag
+      - REDIS_URL=redis://redis:6379/5
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    networks:
+      - knowledge-rag-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      graph-service:
+        condition: service_started
+      llm-service:
+        condition: service_started
+    restart: unless-stopped
+
+# ===========================================
+# 网络配置
+# ===========================================
+networks:
+  knowledge-rag-network:
+    driver: bridge
+    name: knowledge-rag-network
+
+# ===========================================
+# 数据卷配置
+# ===========================================
+volumes:
+  postgres_data:
+    name: knowledge-rag-postgres-data
+  redis_data:
+    name: knowledge-rag-redis-data
+  neo4j_data:
+    name: knowledge-rag-neo4j-data
+  neo4j_logs:
+    name: knowledge-rag-neo4j-logs
+  weaviate_data:
+    name: knowledge-rag-weaviate-data

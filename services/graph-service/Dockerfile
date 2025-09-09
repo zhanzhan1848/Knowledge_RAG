@@ -42,10 +42,14 @@ COPY services/graph-service/app/ /app/app/
 # 创建必要的目录
 RUN mkdir -p /app/data /app/logs /app/temp
 
-# 创建非root用户
-RUN addgroup --system appuser && adduser --system --group appuser
-RUN chown -R appuser:appuser /app
+# 创建非root用户和设置HOME目录
+RUN addgroup --system appuser && adduser --system --group appuser --home /home/appuser
+RUN mkdir -p /home/appuser/.cache/uv && chown -R appuser:appuser /app /home/appuser
 USER appuser
+
+# 设置用户环境变量
+ENV HOME=/home/appuser \
+    UV_CACHE_DIR=/home/appuser/.cache/uv
 
 # 设置权限
 RUN chmod -R 755 /app
