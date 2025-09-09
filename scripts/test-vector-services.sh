@@ -80,7 +80,7 @@ test_text2vec() {
   
   # 使用8081端口是因为在docker-compose.core.yml中将容器的8080端口映射到了宿主机的8081端口
   # 注意：虽然官方Weaviate文档没有明确说明model2vec有/health端点，但在docker-compose.core.yml中配置了此健康检查端点
-  while ! curl -s -f http://localhost:8081/health > /dev/null; do
+  while ! curl -s -f http://localhost:8081/docs > /dev/null; do
     if [ $counter -ge $timeout ]; then
       echo -e "${RED}等待text2vec-model2vec服务超时!${NC}"
       echo -e "${YELLOW}最终容器状态:${NC}"
@@ -102,7 +102,7 @@ test_text2vec() {
   echo -e "\n${GREEN}text2vec-model2vec服务已就绪!${NC}"
   
   echo -e "${YELLOW}测试健康检查端点...${NC}"
-  curl -s http://localhost:8081/health | jq
+  curl -s http://localhost:8081/docs | jq
   
   echo -e "${YELLOW}测试向量化功能...${NC}"
   curl -s -X POST "http://localhost:8081/vectorize" \

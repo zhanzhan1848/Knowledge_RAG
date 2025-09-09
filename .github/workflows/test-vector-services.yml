@@ -62,7 +62,7 @@ jobs:
         docker compose -f docker-compose.core.yml exec -T text2vec-model2vec sh -c "apt-get update && apt-get install -y curl" || true
         
         # 等待服务就绪
-        timeout 120 bash -c 'until curl -f http://localhost:8081/health; do echo "等待text2vec-model2vec..." | tee -a logs/text2vec.log; sleep 3; done'
+        timeout 120 bash -c 'until curl -f http://localhost:8081/docs; do echo "等待text2vec-model2vec..." | tee -a logs/text2vec.log; sleep 3; done'
         # 注意：这里使用8081是因为在docker-compose.core.yml中将容器的8080端口映射到了宿主机的8081端口
         
         echo "text2vec-model2vec服务就绪" | tee -a logs/text2vec.log
@@ -74,7 +74,7 @@ jobs:
         
         # 测试健康检查端点
         echo "测试健康检查端点..." | tee -a logs/text2vec.log
-        curl -f http://localhost:8081/health | tee -a logs/text2vec.log
+        curl -f http://localhost:8081/docs | tee -a logs/text2vec.log
         
         # 测试向量化功能
         echo "测试向量化功能..." | tee -a logs/text2vec.log
