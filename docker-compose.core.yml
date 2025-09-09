@@ -84,7 +84,7 @@ services:
     environment:
       ENABLE_CUDA: 0
     # healthcheck:
-      # test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      # test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       # interval: 30s
       # timeout: 10s
       # retries: 5
@@ -115,9 +115,9 @@ services:
       - weaviate_data:/var/lib/weaviate
     networks:
       - knowledge-rag-network
-    depends_on:
-      text2vec-model2vec:
-        condition: service_healthy
+    # depends_on:
+    #   text2vec-model2vec:
+    #     condition: service_healthy
     restart: on-failure:0
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/v1/.well-known/ready"]
