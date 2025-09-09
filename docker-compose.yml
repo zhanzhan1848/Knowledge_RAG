@@ -160,6 +160,9 @@ services:
 
   weaviate:
     image: cr.weaviate.io/semitechnologies/weaviate:1.32.2
+    container_name: knowledge-rag-weaviate
+    networks:
+      - knowledge-rag-network
     ports:
       - "8080:8080"
       - "50051:50051"
@@ -170,6 +173,9 @@ services:
   # A lightweight embedding model that will generate vectors from objects during import
   text2vec-model2vec:
     image: cr.weaviate.io/semitechnologies/model2vec-inference:minishlab-potion-base-32M
+    container_name: knowledge-rag-text2vec-model2vec
+    networks:
+      - knowledge-rag-network
 
   # ===========================================
   # 微服务应用
