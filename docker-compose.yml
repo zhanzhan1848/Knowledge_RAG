@@ -132,7 +132,7 @@ services:
       MODEL2VEC_INFERENCE_API: 'http://text2vec-model2vec:8080'
       CLUSTER_HOSTNAME: 'node1'
     volumes:
-      - weaviate_data:/var/lib/weaviate
+      - weaviate_data: ./data
     networks:
       - knowledge-rag-network
     restart: on-failure:0
