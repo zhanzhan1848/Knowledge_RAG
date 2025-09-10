@@ -32,6 +32,12 @@ if not os.path.exists(logs_dir):
 # 导入API网关配置
 from config import ServiceConfig, get_config
 
+async def mock_receive():
+    return {"type": "http.request", "body": b"", "more_body": False}
+
+async def mock_send(message):
+    return None
+
 
 class TestAPIGateway:
     """API网关测试类"""
@@ -106,8 +112,8 @@ class TestAPIGateway:
             "method": "GET",
             "path": "/test/endpoint",
             "headers": [(b"host", b"testserver")],
-            "receive": AsyncMock(),
-            "send": AsyncMock(),
+            "receive": mock_receive,
+            "send": mock_send,
         })
         
         # 调用代理路由
@@ -394,8 +400,8 @@ class TestRetryMechanism:
             "method": "GET",
             "path": "/test/endpoint",
             "headers": [(b"host", b"testserver")],
-            "receive": AsyncMock(),
-            "send": AsyncMock(),
+            "receive": mock_receive,
+            "send": mock_send,
         })
         
         # 调用代理路由
@@ -445,8 +451,8 @@ class TestRetryMechanism:
             "method": "GET",
             "path": "/test/endpoint",
             "headers": [(b"host", b"testserver")],
-            "receive": AsyncMock(),
-            "send": AsyncMock(),
+            "receive": mock_receive,
+            "send": mock_send,
         })
         
         # 调用代理路由
