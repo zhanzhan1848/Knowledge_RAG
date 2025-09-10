@@ -88,7 +88,7 @@ class TestAPIGateway:
         from main import proxy_route
         
         # 模拟请求和服务
-        mock_request = AsyncMock()
+        # 不要重新赋值mock_request，直接设置其返回值
         mock_request.return_value = AsyncMock(
             status_code=200,
             headers={"Content-Type": "application/json"},
@@ -382,7 +382,8 @@ class TestRetryMechanism:
         config_mock.retry_backoff = 0.1
         
         # 模拟请求失败后成功
-        response_mock = AsyncMock()
+        # 创建一个响应对象，而不是AsyncMock
+        response_mock = MagicMock()
         response_mock.status_code = 200
         response_mock.headers = {"Content-Type": "application/json"}
         response_mock.content = json.dumps({"result": "success"}).encode()
