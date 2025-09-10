@@ -2,12 +2,24 @@
 # 测试API网关的路由、认证、限流等功能
 
 import json
+import asyncio
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch, MagicMock
 
 import pytest
-from fastapi import FastAPI, HTTPException, status
+import httpx
+from fastapi import FastAPI, HTTPException, status, Request
 from fastapi.testclient import TestClient
+from pydantic import BaseModel
+from typing import List, Dict, Optional
+
+# 导入API网关相关模块
+from config import ServiceConfig, get_config
+import sys
+import os
+
+# 添加项目根目录到路径
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 
 class TestAPIGateway:
@@ -50,6 +62,206 @@ class TestAPIGateway:
         assert response.status_code == 200
         # 在实际实现中，这些头部会由CORS中间件添加
         # assert "Access-Control-Allow-Origin" in response.headers
+        
+    @pytest.mark.asyncio
+    @patch("main.get_service_for_path")
+    @patch("httpx.AsyncClient.request")
+    async def test_proxy_route(self, mock_request, mock_get_service):
+        """测试代理路由功能"""
+        from main import proxy_route
+        
+        # 模拟请求和服务
+        mock_request = AsyncMock()
+        mock_request.return_value = AsyncMock(
+            status_code=200,
+            headers={"Content-Type": "application/json"},
+            content=json.dumps({"result": "success"}).encode(),
+        )
+        
+        mock_service = ServiceConfig(
+            name="test-service",
+            base_url="http://test-service:8000",
+            routes=["/test"],
+            health_check_path="/health",
+            timeout=30.0,
+            is_active=True,
+            weight=1
+        )
+        mock_get_service.return_value = mock_service
+        
+        # 创建模拟请求
+        request = Request(scope={
+            "type": "http",
+            "method": "GET",
+            "path": "/test/endpoint",
+            "headers": [(b"host", b"testserver")],
+        })
+        
+        # 调用代理路由
+        response = await proxy_route(request, "/test/endpoint")
+        
+        # 验证结果
+        assert response.status_code == 200
+        assert json.loads(response.body) == {"result": "success"}
+        
+        # 验证服务调用
+        mock_get_service.assert_called_once_with("/test/endpoint")
+        mock_request.assert_called_once()
+        
+    @pytest.mark.asyncio
+    async def test_service_discovery(self):
+        """测试服务发现功能"""
+        from main import get_service_for_path
+        
+        # 创建测试服务配置
+        services = {
+            "auth": ServiceConfig(
+                name="auth-service",
+                base_url="http://auth-service:8001",
+                routes=["/auth", "/users"],
+                is_active=True,
+                weight=1
+            ),
+            "document": ServiceConfig(
+                name="document-service",
+                base_url="http://document-service:8002",
+                routes=["/documents"],
+                is_active=True,
+                weight=1
+            )
+        }
+        
+        # 模拟SERVICES字典
+        with patch("main.SERVICES", services):
+            # 测试匹配路由
+            service = await get_service_for_path("/auth/login")
+            assert service is not None
+            assert service.name == "auth-service"
+            
+            # 测试未匹配路由
+            service = await get_service_for_path("/unknown/path")
+            assert service is None
+            
+            # 测试非活动服务
+            services["auth"].is_active = False
+            service = await get_service_for_path("/auth/login")
+            assert service is None
+
+
+class TestLoadBalancing:
+    """负载均衡测试类"""
+    
+    @pytest.mark.asyncio
+    async def test_weighted_load_balancing(self):
+        """测试加权负载均衡"""
+        from main import get_service_for_path
+        import random
+        
+        # 创建测试服务配置，两个服务具有相同路由但不同权重
+        services = {
+            "service1": ServiceConfig(
+                name="service1",
+                base_url="http://service1:8001",
+                routes=["/api"],
+                is_active=True,
+                weight=3  # 权重为3
+            ),
+            "service2": ServiceConfig(
+                name="service2",
+                base_url="http://service2:8002",
+                routes=["/api"],
+                is_active=True,
+                weight=1  # 权重为1
+            )
+        }
+        
+        # 模拟随机函数，确保可预测的测试结果
+        with patch("main.SERVICES", services), \
+             patch("random.uniform", side_effect=[1.5, 3.5]):
+            # 第一次调用应该返回service1（权重范围0-3）
+            service = await get_service_for_path("/api/endpoint")
+            assert service.name == "service1"
+            
+            # 第二次调用应该返回service2（权重范围3-4）
+            service = await get_service_for_path("/api/endpoint")
+            assert service.name == "service2"
+
+
+class TestRateLimiting:
+    """速率限制测试类"""
+    
+    @pytest.mark.asyncio
+    async def test_rate_limit_middleware(self):
+        """测试速率限制中间件"""
+        from main import RateLimitMiddleware
+        
+        # 创建测试应用和中间件
+        app = FastAPI()
+        
+        # 模拟配置
+        config_mock = MagicMock()
+        config_mock.rate_limit_enabled = True
+        config_mock.rate_limit_requests = 2  # 限制为2个请求
+        config_mock.rate_limit_window = 60
+        
+        with patch("main.config", config_mock):
+            middleware = RateLimitMiddleware(app)
+            
+            # 创建模拟请求
+            request = Request(scope={
+                "type": "http",
+                "client": ("127.0.0.1", 12345),
+                "method": "GET",
+                "path": "/test",
+            })
+            
+            # 模拟call_next函数
+            async def mock_call_next(request):
+                return Response(content="OK", status_code=200)
+            
+            # 第一个请求应该通过
+            response = await middleware.dispatch(request, mock_call_next)
+            assert response.status_code == 200
+            
+            # 第二个请求应该通过
+            response = await middleware.dispatch(request, mock_call_next)
+            assert response.status_code == 200
+            
+            # 第三个请求应该被限制
+            response = await middleware.dispatch(request, mock_call_next)
+            assert response.status_code == 429
+            
+    @pytest.mark.asyncio
+    async def test_rate_limit_disabled(self):
+        """测试禁用速率限制"""
+        from main import RateLimitMiddleware
+        
+        # 创建测试应用和中间件
+        app = FastAPI()
+        
+        # 模拟配置
+        config_mock = MagicMock()
+        config_mock.rate_limit_enabled = False
+        
+        with patch("main.config", config_mock):
+            middleware = RateLimitMiddleware(app)
+            
+            # 创建模拟请求
+            request = Request(scope={
+                "type": "http",
+                "client": ("127.0.0.1", 12345),
+                "method": "GET",
+                "path": "/test",
+            })
+            
+            # 模拟call_next函数
+            async def mock_call_next(request):
+                return Response(content="OK", status_code=200)
+            
+            # 多次请求都应该通过
+            for _ in range(10):
+                response = await middleware.dispatch(request, mock_call_next)
+                assert response.status_code == 200
 
 
 class TestAuthentication:
@@ -99,31 +311,157 @@ class TestAuthentication:
 
     def test_protected_endpoint(self):
         """测试受保护的端点"""
+        # 此处可以添加受保护端点的测试逻辑
+        pass
 
-        def mock_get_current_user(token: str = None):
-            """模拟获取当前用户函数"""
-            if not token:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Missing authentication token",
-                )
 
-            if token == "Bearer valid_token":
-                return {"user_id": "123", "username": "testuser", "role": "user"}
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid authentication token",
-                )
+class TestRetryMechanism:
+    """重试机制测试类"""
+    
+    @pytest.mark.asyncio
+    @patch("main.get_service_for_path")
+    @patch("httpx.AsyncClient.request")
+    @patch("asyncio.sleep")
+    async def test_retry_mechanism(self, mock_sleep, mock_request, mock_get_service):
+        """测试请求重试机制"""
+        from main import proxy_route
+        
+        # 模拟服务
+        mock_service = ServiceConfig(
+            name="test-service",
+            base_url="http://test-service:8000",
+            routes=["/test"],
+            health_check_path="/health",
+            timeout=1.0,
+            is_active=True,
+            weight=1
+        )
+        mock_get_service.return_value = mock_service
+        
+        # 模拟配置
+        config_mock = MagicMock()
+        config_mock.retry_enabled = True
+        config_mock.max_retries = 2
+        config_mock.retry_backoff = 0.1
+        
+        # 模拟请求失败后成功
+        mock_request.side_effect = [
+            httpx.RequestError("Connection error"),  # 第一次失败
+            AsyncMock(  # 第二次成功
+                status_code=200,
+                headers={"Content-Type": "application/json"},
+                content=json.dumps({"result": "success"}).encode(),
+            )
+        ]
+        
+        # 创建模拟请求
+        request = Request(scope={
+            "type": "http",
+            "method": "GET",
+            "path": "/test/endpoint",
+            "headers": [(b"host", b"testserver")],
+        })
+        
+        # 调用代理路由
+        with patch("main.config", config_mock):
+            response = await proxy_route(request, "/test/endpoint")
+        
+        # 验证结果
+        assert response.status_code == 200
+        assert json.loads(response.body) == {"result": "success"}
+        
+        # 验证重试
+        assert mock_request.call_count == 2
+        mock_sleep.assert_called_once_with(0.1)  # 验证退避时间
+        
+    @pytest.mark.asyncio
+    @patch("main.get_service_for_path")
+    @patch("httpx.AsyncClient.request")
+    async def test_retry_exhausted(self, mock_request, mock_get_service):
+        """测试重试耗尽"""
+        from main import proxy_route
+        
+        # 模拟服务
+        mock_service = ServiceConfig(
+            name="test-service",
+            base_url="http://test-service:8000",
+            routes=["/test"],
+            health_check_path="/health",
+            timeout=1.0,
+            is_active=True,
+            weight=1
+        )
+        mock_get_service.return_value = mock_service
+        
+        # 模拟配置
+        config_mock = MagicMock()
+        config_mock.retry_enabled = True
+        config_mock.max_retries = 2
+        config_mock.retry_backoff = 0.1
+        
+        # 模拟请求始终失败
+        error = httpx.RequestError("Connection error")
+        mock_request.side_effect = [error, error, error]
+        
+        # 创建模拟请求
+        request = Request(scope={
+            "type": "http",
+            "method": "GET",
+            "path": "/test/endpoint",
+            "headers": [(b"host", b"testserver")],
+        })
+        
+        # 调用代理路由
+        with patch("main.config", config_mock), pytest.raises(httpx.RequestError):
+            await proxy_route(request, "/test/endpoint")
+        
+        # 验证重试次数
+        assert mock_request.call_count == 3  # 初始请求 + 2次重试
 
-        @self.app.get("/protected")
-        async def protected_endpoint(authorization: str = None):
-            user = mock_get_current_user(authorization)
-            return {"message": f"Hello, {user['username']}!"}
 
+class TestAuthentication(TestAuthentication):
+    """继续认证测试类"""
+    
+    def mock_get_current_user(self, token: str = None):
+        """模拟获取当前用户函数"""
+        if not token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing authentication token",
+            )
+
+        if token == "Bearer valid_token":
+            return {"user_id": "123", "username": "testuser", "role": "user"}
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication token",
+            )
+
+    def test_protected_endpoint(self):
+        """测试受保护的端点"""
+        # 定义受保护的端点
+        def setup_protected_endpoint():
+            @self.app.get("/protected")
+            async def protected_endpoint(authorization: str = None):
+                user = self.mock_get_current_user(authorization)
+                return {"message": f"Hello, {user['username']}!"}
+            
+        # 设置端点
+        setup_protected_endpoint()
+        
         # 测试无令牌访问
         response = self.client.get("/protected")
-        # 在实际实现中，这会返回401
+        assert response.status_code == 401
+        
+        # 测试有效令牌访问
+        response = self.client.get("/protected", headers={"Authorization": "Bearer valid_token"})
+        assert response.status_code == 200
+        assert response.json()["message"] == "Hello, testuser!"
+        
+        # 测试无效令牌访问
+        response = self.client.get("/protected", headers={"Authorization": "Bearer invalid_token"})
+        assert response.status_code == 401
 
         # 测试有效令牌访问
         response = self.client.get(
