@@ -18,10 +18,16 @@ import sys
 import os
 
 # 添加项目根目录到路径
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.append(project_root)
 
 # 添加API网关目录到路径
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../services/api-gateway')))
+
+# 确保日志目录存在
+logs_dir = os.path.join(project_root, 'logs')
+if not os.path.exists(logs_dir):
+    os.makedirs(logs_dir, exist_ok=True)
 
 # 导入API网关配置
 from config import ServiceConfig, get_config

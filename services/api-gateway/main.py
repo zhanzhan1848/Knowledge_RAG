@@ -28,6 +28,12 @@ import asyncio
 config = get_config()
 
 # 配置日志
+# 确保日志目录存在
+import os
+log_dir = os.path.dirname(config.log_file)
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir, exist_ok=True)
+
 logging.basicConfig(
     level=getattr(logging, config.log_level),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
