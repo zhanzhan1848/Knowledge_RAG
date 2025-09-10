@@ -96,9 +96,9 @@ class TestAPIGateway:
         )
         
         mock_service = ServiceConfig(
-            name="test-service",
-            base_url="http://test-service:8000",
-            routes=["/test"],
+            name="auth-service",
+            base_url="http://auth-service:8001",
+            routes=["/auth"],
             health_check_path="/health",
             timeout=30.0,
             is_active=True,
@@ -110,20 +110,20 @@ class TestAPIGateway:
         request = Request(scope={
             "type": "http",
             "method": "GET",
-            "path": "/test/endpoint",
+            "path": "/auth/login",
             "headers": [(b"host", b"testserver")],
             "client": ("127.0.0.1", 12345)
         }, receive=mock_receive, send=mock_send)
         
         # 调用代理路由
-        response = await proxy_route(request, "/test/endpoint")
+        response = await proxy_route(request, "/auth/login")
         
         # 验证结果
         assert response.status_code == 200
         assert json.loads(response.body) == {"result": "success"}
         
         # 验证服务调用
-        mock_get_service.assert_called_once_with("/test/endpoint")
+        mock_get_service.assert_called_once_with("/auth/login")
         mock_request.assert_called_once()
         
     @pytest.mark.asyncio
@@ -365,9 +365,9 @@ class TestRetryMechanism:
         
         # 模拟服务
         mock_service = ServiceConfig(
-            name="test-service",
-            base_url="http://test-service:8000",
-            routes=["/test"],
+            name="qa-service",
+            base_url="http://qa-service:8005",
+            routes=["/qa"],
             health_check_path="/health",
             timeout=1.0,
             is_active=True,
@@ -398,14 +398,14 @@ class TestRetryMechanism:
         request = Request(scope={
             "type": "http",
             "method": "GET",
-            "path": "/test/endpoint",
+            "path": "/qa/questions",
             "headers": [(b"host", b"testserver")],
             "client": ("127.0.0.1", 12345),
         }, receive=mock_receive, send=mock_send)
         
         # 调用代理路由
         with patch("main.config", config_mock):
-            response = await proxy_route(request, "/test/endpoint")
+            response = await proxy_route(request, "/qa/questions")
         
         # 验证结果
         assert response.status_code == 200
@@ -424,9 +424,9 @@ class TestRetryMechanism:
         
         # 模拟服务
         mock_service = ServiceConfig(
-            name="test-service",
-            base_url="http://test-service:8000",
-            routes=["/test"],
+            name="qa-service",
+            base_url="http://qa-service:8005",
+            routes=["/qa"],
             health_check_path="/health",
             timeout=1.0,
             is_active=True,
@@ -448,14 +448,14 @@ class TestRetryMechanism:
         request = Request(scope={
             "type": "http",
             "method": "GET",
-            "path": "/test/endpoint",
+            "path": "/qa/questions",
             "headers": [(b"host", b"testserver")],
             "client": ("127.0.0.1", 12345),
         }, receive=mock_receive, send=mock_send)
         
         # 调用代理路由
         with patch("main.config", config_mock), pytest.raises(httpx.RequestError):
-            await proxy_route(request, "/test/endpoint")
+            await proxy_route(request, "/qa/questions")
         
         # 验证重试次数
         assert mock_request.call_count == 3  # 初始请求 + 2次重试
