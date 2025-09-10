@@ -22,7 +22,7 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 sys.path.append(project_root)
 
 # 添加API网关目录到路径
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../services/api-gateway')))
+sys.path.append(os.path.abspath(os.path.join(project_root, 'services/api-gateway')))
 
 # 确保日志目录存在
 logs_dir = os.path.join(project_root, 'logs')
