@@ -143,9 +143,58 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # 处理请求
         return await call_next(request)
 
+# 认证中间件
+class AuthMiddleware(BaseHTTPMiddleware):
+    """认证中间件，验证请求中的JWT令牌"""
+    
+    async def dispatch(self, request: Request, call_next):
+        # 获取路径
+        path = request.url.path
+        
+        # 不需要认证的路径
+        public_paths = [
+            "/health", 
+            "/api/docs", 
+            "/api/redoc", 
+            "/api/openapi.json",
+            "/services",
+            "/services/health",
+            "/auth/login",
+            "/auth/register"
+        ]
+        
+        # 检查是否是公开路径
+        for public_path in public_paths:
+            if path.startswith(public_path):
+                return await call_next(request)
+        
+        # 获取认证头
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Authentication required"}
+            )
+        
+        # 提取令牌
+        token = auth_header.replace("Bearer ", "")
+        
+        # 在实际应用中，这里应该调用auth服务验证令牌
+        # 为了测试，我们简单地接受任何非空令牌
+        if token:
+            # 添加用户信息到请求状态
+            request.state.user = {"user_id": "test_user", "role": "user"}
+            return await call_next(request)
+        else:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Invalid token"}
+            )
+
 # 添加中间件
 app.add_middleware(RequestLoggerMiddleware)
 app.add_middleware(RateLimitMiddleware)
+app.add_middleware(AuthMiddleware)
 
 # 创建HTTP客户端
 http_client = httpx.AsyncClient()
@@ -256,7 +305,7 @@ async def services_health():
 
 # 通用代理路由
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
-async def api_gateway(request: Request, path: str):
+async def proxy_route(request: Request, path: str):
     """通用API网关路由，转发请求到对应的微服务"""
     # 获取完整路径
     full_path = f"/{path}"

@@ -322,8 +322,27 @@ class TestAuthentication:
 
     def test_protected_endpoint(self):
         """测试受保护的端点"""
-        # 此处可以添加受保护端点的测试逻辑
-        pass
+        # 创建测试端点
+        @self.app.get("/protected")
+        async def protected_endpoint():
+            return {"message": "This is a protected endpoint"}
+            
+        # 添加认证中间件
+        from main import AuthMiddleware
+        self.app.add_middleware(AuthMiddleware)
+        
+        # 测试无认证头的请求
+        response = self.client.get("/protected")
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Authentication required"
+        
+        # 测试有效认证头的请求
+        response = self.client.get(
+            "/protected",
+            headers={"Authorization": "Bearer valid_token"}
+        )
+        assert response.status_code == 200
+        assert response.json()["message"] == "This is a protected endpoint"
 
 
 class TestRetryMechanism:
