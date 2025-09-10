@@ -14,12 +14,17 @@ from pydantic import BaseModel
 from typing import List, Dict, Optional
 
 # 导入API网关相关模块
-from config import ServiceConfig, get_config
 import sys
 import os
 
 # 添加项目根目录到路径
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+# 添加API网关目录到路径
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../services/api-gateway')))
+
+# 导入API网关配置
+from config import ServiceConfig, get_config
 
 
 class TestAPIGateway:
