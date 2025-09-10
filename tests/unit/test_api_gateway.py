@@ -111,10 +111,8 @@ class TestAPIGateway:
             "type": "http",
             "method": "GET",
             "path": "/test/endpoint",
-            "headers": [(b"host", b"testserver")],
-            "receive": mock_receive,
-            "send": mock_send,
-        })
+            "headers": [(b"host", b"testserver")]
+        }, receive=mock_receive, send=mock_send)
         
         # 调用代理路由
         response = await proxy_route(request, "/test/endpoint")
@@ -399,10 +397,8 @@ class TestRetryMechanism:
             "type": "http",
             "method": "GET",
             "path": "/test/endpoint",
-            "headers": [(b"host", b"testserver")],
-            "receive": mock_receive,
-            "send": mock_send,
-        })
+            "headers": [(b"host", b"testserver")]
+        }, receive=mock_receive, send=mock_send)
         
         # 调用代理路由
         with patch("main.config", config_mock):
@@ -450,10 +446,8 @@ class TestRetryMechanism:
             "type": "http",
             "method": "GET",
             "path": "/test/endpoint",
-            "headers": [(b"host", b"testserver")],
-            "receive": mock_receive,
-            "send": mock_send,
-        })
+            "headers": [(b"host", b"testserver")]
+        }, receive=mock_receive, send=mock_send)
         
         # 调用代理路由
         with patch("main.config", config_mock), pytest.raises(httpx.RequestError):
