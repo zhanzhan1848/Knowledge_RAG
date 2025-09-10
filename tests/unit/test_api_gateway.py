@@ -111,7 +111,8 @@ class TestAPIGateway:
             "type": "http",
             "method": "GET",
             "path": "/test/endpoint",
-            "headers": [(b"host", b"testserver")]
+            "headers": [(b"host", b"testserver")],
+            "client": ("127.0.0.1", 12345)
         }, receive=mock_receive, send=mock_send)
         
         # 调用代理路由
@@ -397,7 +398,8 @@ class TestRetryMechanism:
             "type": "http",
             "method": "GET",
             "path": "/test/endpoint",
-            "headers": [(b"host", b"testserver")]
+            "headers": [(b"host", b"testserver")],
+            "client": ("127.0.0.1", 12345),
         }, receive=mock_receive, send=mock_send)
         
         # 调用代理路由
@@ -446,7 +448,8 @@ class TestRetryMechanism:
             "type": "http",
             "method": "GET",
             "path": "/test/endpoint",
-            "headers": [(b"host", b"testserver")]
+            "headers": [(b"host", b"testserver")],
+            "client": ("127.0.0.1", 12345),
         }, receive=mock_receive, send=mock_send)
         
         # 调用代理路由
