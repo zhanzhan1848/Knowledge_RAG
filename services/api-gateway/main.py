@@ -147,6 +147,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 class AuthMiddleware(BaseHTTPMiddleware):
     """认证中间件，验证请求中的JWT令牌"""
     
+    def __init__(self, app):
+        super().__init__(app)
+        self.auth_service_url = None
+        # 从配置中获取认证服务URL
+        for service in SERVICES.values():
+            if service.name == "auth-service":
+                self.auth_service_url = f"http://{service.host}:{service.port}"
+                break
+    
     async def dispatch(self, request: Request, call_next):
         # 获取路径
         path = request.url.path
@@ -160,7 +169,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "/services",
             "/services/health",
             "/auth/login",
-            "/auth/register"
+            "/auth/register",
+            "/auth/verify-email",
+            "/auth/password-reset",
+            "/auth/password-reset/confirm"
         ]
         
         # 检查是否是公开路径
@@ -179,21 +191,145 @@ class AuthMiddleware(BaseHTTPMiddleware):
         # 提取令牌
         token = auth_header.replace("Bearer ", "")
         
-        # 在实际应用中，这里应该调用auth服务验证令牌
-        # 为了测试，我们简单地接受任何非空令牌
-        if token:
-            # 添加用户信息到请求状态
-            request.state.user = {"user_id": "test_user", "role": "user"}
-            return await call_next(request)
-        else:
+        # 验证令牌
+        try:
+            user_info = await self.verify_token(token)
+            if user_info:
+                # 添加用户信息到请求状态
+                request.state.user = user_info
+                # 将认证头传递给下游服务
+                request.headers.__dict__["_list"].append(
+                    (b"authorization", auth_header.encode())
+                )
+                return await call_next(request)
+            else:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Invalid token"}
+                )
+        except Exception as e:
+            logger.error(f"Token verification failed: {str(e)}")
             return JSONResponse(
                 status_code=401,
-                content={"detail": "Invalid token"}
+                content={"detail": "Token verification failed"}
             )
+    
+    async def verify_token(self, token: str) -> Optional[Dict]:
+        """验证JWT令牌"""
+        if not self.auth_service_url:
+            logger.warning("Auth service URL not configured")
+            return None
+        
+        try:
+            # 调用认证服务验证令牌
+            headers = {"Authorization": f"Bearer {token}"}
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.auth_service_url}/auth/me",
+                    headers=headers,
+                    timeout=5.0
+                )
+                
+                if response.status_code == 200:
+                    user_data = response.json()
+                    return {
+                        "user_id": user_data.get("id"),
+                        "username": user_data.get("username"),
+                        "email": user_data.get("email"),
+                        "roles": user_data.get("roles", []),
+                        "is_superuser": user_data.get("is_superuser", False)
+                    }
+                else:
+                    logger.warning(f"Token verification failed: {response.status_code}")
+                    return None
+        except httpx.TimeoutException:
+            logger.error("Auth service timeout")
+            return None
+        except Exception as e:
+            logger.error(f"Error verifying token: {str(e)}")
+            return None
 
-# 添加中间件
+class PermissionMiddleware(BaseHTTPMiddleware):
+    """权限验证中间件，基于路径和用户角色进行权限控制"""
+    
+    def __init__(self, app):
+        super().__init__(app)
+        # 定义路径权限映射
+        self.permission_map = {
+            "/auth/admin/": ["user.admin"],
+            "/admin/": ["user.admin"],
+            "/document/upload": ["document.write"],
+            "/document/delete": ["document.delete"],
+            "/knowledge-graph/admin": ["kg.admin"],
+            "/vector/admin": ["vector.admin"],
+        }
+    
+    async def dispatch(self, request: Request, call_next):
+        # 获取路径
+        path = request.url.path
+        
+        # 检查是否需要特殊权限
+        required_permissions = self.get_required_permissions(path)
+        
+        if required_permissions:
+            # 检查用户是否已认证
+            if not hasattr(request.state, 'user') or not request.state.user:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Authentication required"}
+                )
+            
+            user = request.state.user
+            
+            # 超级用户拥有所有权限
+            if user.get("is_superuser", False):
+                return await call_next(request)
+            
+            # 检查用户权限
+            user_permissions = await self.get_user_permissions(user)
+            
+            # 验证是否有所需权限
+            has_permission = any(
+                perm in user_permissions for perm in required_permissions
+            )
+            
+            if not has_permission:
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "Insufficient permissions"}
+                )
+        
+        return await call_next(request)
+    
+    def get_required_permissions(self, path: str) -> List[str]:
+        """获取路径所需的权限"""
+        for pattern, permissions in self.permission_map.items():
+            if path.startswith(pattern):
+                return permissions
+        return []
+    
+    async def get_user_permissions(self, user: Dict) -> List[str]:
+        """获取用户权限列表"""
+        # 这里可以缓存权限信息以提高性能
+        permissions = []
+        
+        # 基于角色的基本权限
+        roles = user.get("roles", [])
+        for role in roles:
+            if role == "admin":
+                permissions.extend(["user.admin", "document.write", "document.delete", "kg.admin", "vector.admin"])
+            elif role == "editor":
+                permissions.extend(["document.write", "document.read"])
+            elif role == "viewer":
+                permissions.extend(["document.read"])
+        
+        return permissions
+
+
+# 添加中间件（注意顺序很重要）
 app.add_middleware(RequestLoggerMiddleware)
 app.add_middleware(RateLimitMiddleware)
+app.add_middleware(PermissionMiddleware)
 app.add_middleware(AuthMiddleware)
 
 # 创建HTTP客户端
@@ -264,17 +400,190 @@ async def list_services():
         "services": [
             {
                 "name": service.name,
+                "host": service.host,
+                "port": service.port,
                 "routes": service.routes,
-                "status": "active" if service.is_active else "inactive",
+                "is_active": service.is_active,
+                "weight": service.weight
             }
             for service in SERVICES.values()
         ]
     }
 
+
 @app.get("/services/health")
-async def services_health():
+async def check_services_health():
     """检查所有服务的健康状态"""
-    results = {}
+    health_status = {}
+    
+    for service_name, service in SERVICES.items():
+        if not service.is_active:
+            health_status[service_name] = {
+                "status": "inactive",
+                "message": "Service is marked as inactive"
+            }
+            continue
+        
+        try:
+            # 尝试连接服务的健康检查端点
+            service_url = f"http://{service.host}:{service.port}"
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{service_url}/health",
+                    timeout=5.0
+                )
+                
+                if response.status_code == 200:
+                    health_status[service_name] = {
+                        "status": "healthy",
+                        "response_time": response.elapsed.total_seconds(),
+                        "data": response.json() if response.headers.get("content-type", "").startswith("application/json") else None
+                    }
+                else:
+                    health_status[service_name] = {
+                        "status": "unhealthy",
+                        "message": f"HTTP {response.status_code}"
+                    }
+        
+        except httpx.TimeoutException:
+            health_status[service_name] = {
+                "status": "timeout",
+                "message": "Service did not respond within timeout"
+            }
+        except Exception as e:
+            health_status[service_name] = {
+                "status": "error",
+                "message": str(e)
+            }
+    
+    # 计算整体健康状态
+    healthy_count = sum(1 for status in health_status.values() if status["status"] == "healthy")
+    total_count = len(health_status)
+    
+    overall_status = "healthy" if healthy_count == total_count else "degraded" if healthy_count > 0 else "unhealthy"
+    
+    return {
+        "overall_status": overall_status,
+        "healthy_services": healthy_count,
+        "total_services": total_count,
+        "services": health_status
+    }
+
+
+@app.get("/auth/health")
+async def check_auth_service_health():
+    """专门检查认证服务的健康状态"""
+    auth_service = None
+    for service in SERVICES.values():
+        if service.name == "auth-service":
+            auth_service = service
+            break
+    
+    if not auth_service:
+        return JSONResponse(
+            status_code=404,
+            content={"detail": "Auth service not configured"}
+        )
+    
+    try:
+        service_url = f"http://{auth_service.host}:{auth_service.port}"
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{service_url}/health",
+                timeout=5.0
+            )
+            
+            if response.status_code == 200:
+                return {
+                    "status": "healthy",
+                    "service": "auth-service",
+                    "response_time": response.elapsed.total_seconds(),
+                    "data": response.json() if response.headers.get("content-type", "").startswith("application/json") else None
+                }
+            else:
+                return JSONResponse(
+                    status_code=503,
+                    content={
+                        "status": "unhealthy",
+                        "service": "auth-service",
+                        "message": f"HTTP {response.status_code}"
+                    }
+                )
+    
+    except Exception as e:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "error",
+                "service": "auth-service",
+                "message": str(e)
+            }
+        )
+
+
+@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+async def proxy_request(request: Request, path: str):
+    """代理请求到相应的服务"""
+    # 获取目标服务
+    service = await get_service_for_path(f"/{path}")
+    
+    if not service:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No service found for path: /{path}"
+        )
+    
+    # 构建目标URL
+    target_url = f"http://{service.host}:{service.port}/{path}"
+    
+    # 准备请求参数
+    params = dict(request.query_params)
+    headers = dict(request.headers)
+    
+    # 移除一些不需要转发的头
+    headers.pop("host", None)
+    headers.pop("content-length", None)
+    
+    try:
+        # 读取请求体
+        body = await request.body()
+        
+        # 发送请求到目标服务
+        async with httpx.AsyncClient() as client:
+            response = await client.request(
+                method=request.method,
+                url=target_url,
+                params=params,
+                headers=headers,
+                content=body,
+                timeout=30.0
+            )
+        
+        # 准备响应头
+        response_headers = dict(response.headers)
+        response_headers.pop("content-length", None)
+        response_headers.pop("transfer-encoding", None)
+        
+        # 返回响应
+        return Response(
+            content=response.content,
+            status_code=response.status_code,
+            headers=response_headers
+        )
+    
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=504,
+            detail="Service timeout"
+        )
+    except Exception as e:
+        logger.error(f"Proxy request failed: {str(e)}")
+        raise HTTPException(
+            status_code=502,
+            detail="Bad Gateway"
+        )
     
     for service_id, service in SERVICES.items():
         if not service.is_active:
