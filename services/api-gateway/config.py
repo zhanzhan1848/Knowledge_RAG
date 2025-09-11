@@ -61,7 +61,22 @@ default_config = ApiGatewayConfig(
         "document": ServiceConfig(
             name="document-service",
             base_url="http://document-service:8002",
-            routes=["/documents", "/files"],
+            routes=[
+                "/documents",
+                "/files", 
+                "/documents/upload",
+                "/documents/download",
+                "/documents/preview",
+                "/documents/batch-delete",
+                "/documents/batch-restore",
+                "/documents/trash",
+                "/documents/restore",
+                "/documents/permissions",
+                "/documents/share",
+                "/documents/stats",
+                "/quota",
+                "/backup"
+            ],
         ),
         "vector": ServiceConfig(
             name="vector-service",
